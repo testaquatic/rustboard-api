@@ -24,3 +24,6 @@ docker run -d \
 cargo sqlx database create
 cargo sqlx migrate info
 ```
+
+# 엔드포인트
+/swagger 를 확인한다.
