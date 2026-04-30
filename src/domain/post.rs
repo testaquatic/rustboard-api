@@ -6,6 +6,7 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
+/// 저장한 글
 #[derive(Debug, Clone, Serialize, ToSchema)]
 pub struct Post {
     pub id: i64,
@@ -15,10 +16,16 @@ pub struct Post {
 
 #[derive(Debug, Clone, Deserialize, ToSchema)]
 pub struct CreatePostInput {
+    /// 제목,
+    /// 내용이 없거나 공백 문자만 있다면 오류,
+    /// 최대 200자
     pub title: String,
+    /// 본문,
+    /// 최대 10000자
     pub body: String,
 }
 
+/// 서비스 계층에서 반환하는 오류
 #[derive(Debug, thiserror::Error)]
 pub enum ServiceError {
     #[error("제목이 비어 있습니다")]
@@ -33,6 +40,7 @@ pub enum ServiceError {
     Internal,
 }
 
+/// 오류일 경우의 응답
 #[derive(Serialize, ToSchema)]
 pub struct ErrorBody<'a> {
     message: &'a str,

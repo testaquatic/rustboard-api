@@ -1,9 +1,11 @@
 use std::net::SocketAddr;
 
+/// 설정
 #[derive(Debug, Clone)]
 pub struct Config {
     pub bind_addr: SocketAddr,
     pub service_name: String,
+    pub database_url: String,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -23,10 +25,14 @@ impl Config {
 
         let service_name =
             std::env::var("SERVICE_NAME").unwrap_or_else(|_| "rustboard-api".to_string());
+        // DATABASE 환경변수가 없으면 오류
+        let database_url =
+            std::env::var("DATABASE_URL").map_err(|_| ConfigError::Missing("DATABASE_URL"))?;
 
         Ok(Self {
             bind_addr,
             service_name,
+            database_url,
         })
     }
 }

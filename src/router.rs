@@ -15,6 +15,7 @@ use crate::{
     state::AppState,
 };
 
+/// axum 라우터
 pub fn app_routes(config: &Config) -> Router<AppState> {
     Router::new()
         .route("/health", get(health))
@@ -24,6 +25,7 @@ pub fn app_routes(config: &Config) -> Router<AppState> {
         .merge(openapi_router(config))
 }
 
+/// swegger 지원을 위한 라우터
 fn openapi_router(config: &Config) -> SwaggerUi {
     let mut openapi = OpenApiBuilder::new()
         .info(Info::new(config.service_name.as_str(), PKG_VERSION))

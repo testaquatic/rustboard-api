@@ -7,23 +7,26 @@
 # 실행 환경
 
 1. 도커
+
 ```bash
 docker run -d \
-  --name rustboard-pg \
-  -e POSTGRES_USER=rustboard \
-  -e POSTGRES_PASSWORD=rustboard \
-  -e POSTGRES_DB=rustboard \
+  --name rustboard-db \
   -p 5432:5432 \
-  -v rustboard-pgdata:/var/lib/postgresql/data \
+  -e POSTGRES_PASSWORD=postgres \
+  -e POSTGRES_DB=rustboard \
+  -v rustboard-db-data:/var/lib/postgresql/data \
   postgres:16
 ```
 
 2. PostgreSQL
-  - SQLX
+
+- SQLX
+
 ```bash
 cargo sqlx database create
 cargo sqlx migrate info
 ```
 
 # 엔드포인트
+
 /swagger 를 확인한다.
