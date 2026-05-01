@@ -2,8 +2,8 @@ use std::sync::Arc;
 
 use axum::http::{Request, StatusCode};
 use rustboard_api::{
-    config::Config, repository::post::InMemoryPostRepository, router::app_routes,
-    service::post::PostService, state::AppState,
+    config::Config, repository::posts::InMemoryPostRepository, router::app_routes,
+    service::posts::PostService, state::AppState,
 };
 use tower::ServiceExt;
 

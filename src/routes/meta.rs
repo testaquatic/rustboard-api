@@ -21,20 +21,20 @@ pub struct HealthResponse {
 /// 헬스체크 엔드포인트
 #[utoipa::path(
     get,
+    tag = "meta",
     path = "/health", 
     summary = "헬스체크",  
     description = "헬스체크를 담당하는 엔드포인트",
-    responses(
-        (
-            status = 200, 
-            description = "정상", 
-            body = HealthResponse, 
-            example = json!(HealthResponse {
-                 status: "ok", 
-                 service: "rustboard-api".to_string() 
-            })
-        )
-    )
+    responses((
+        status = 200, 
+        description = "정상", 
+        content_type = "application/json",
+        body = HealthResponse, 
+        example = json!(HealthResponse {
+            status: "ok", 
+            service: "rustboard-api".to_string() 
+        })
+    ))
 )]
 pub async fn health(State(state): State<AppState>) -> impl IntoResponse {
     Json(HealthResponse {
@@ -58,20 +58,21 @@ pub struct VersionResponse {
 /// 버전 엔드포인트
 #[utoipa::path(
     get,
+    tag = "meta",
     path = "/version",
     summary = "버전",
     description = "버전을 반환하는 엔드포인트",
-    responses(
-        (
-            status = 200,
-            description = "정상",
-            body = VersionResponse,
-            example = json!(VersionResponse {
+    responses((
+        status = 200,
+        content_type = "application/json",
+        body = VersionResponse,
+        example = json!(
+            VersionResponse {
                 service: "rustboard-api".to_string(),
                 version: PKG_VERSION,
-            })
+            }
         )
-    )
+    ))
 )]
 pub async fn version(State(state): State<AppState>) -> impl IntoResponse {
     Json(VersionResponse {

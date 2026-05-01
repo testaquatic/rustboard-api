@@ -1,12 +1,13 @@
 # Rust 웹 백엔드(Axum)
 
 [Rust 웹 백엔드(Axum)](https://text.ibetter.kr/rust-axum)을 읽으면서 작성한 코드이다.
-
 문서 주소 : [https://text.ibetter.kr/rust-axum](https://text.ibetter.kr/rust-axum)
 
 # 실행 환경
 
-1. 도커
+## POSTGRES
+
+- 도커 이미지 생성
 
 ```bash
 docker run -d \
@@ -18,9 +19,7 @@ docker run -d \
   postgres:16
 ```
 
-2. PostgreSQL
-
-- SQLX
+- SQLX를 이용한 마이그레이션
 
 ```bash
 cargo sqlx database create

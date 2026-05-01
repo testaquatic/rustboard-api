@@ -1,8 +1,11 @@
 use std::sync::Arc;
 
 use rustboard_api::{
-    config::Config, repository::post::PostgresPostRepository, router::app_routes,
-    service::post::PostService, state::AppState,
+    config::Config,
+    repository::{comment::PostgresCommentRepository, posts::PostgresPostRepository},
+    router::app_routes,
+    service::{comments::CommentService, posts::PostService},
+    state::AppState,
 };
 use sqlx::postgres::PgPoolOptions;
 
@@ -24,16 +27,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     sqlx::migrate!("./migrations").run(&pool).await?;
 
     // 리포지토리 초기화
-    let repo = Arc::new(PostgresPostRepository::new(pool.clone()));
+    let posts_repo = Arc::new(PostgresPostRepository::new(pool.clone()));
+    let comments_repo = Arc::new(PostgresCommentRepository::new(pool.clone()));
 
     // 서비스 초기화
-    let posts_service = Arc::new(PostService::new(repo));
+    let posts_service = Arc::new(PostService::new(posts_repo.clone()));
+    let comments_service = Arc::new(CommentService::new(posts_repo, comments_repo));
 
     // AppState 생성
     let state = AppState {
         config: config.clone(),
         pool,
         posts_service,
+        comments_service,
     };
 
     // 라우터를 생성하고 상태 붙이기
