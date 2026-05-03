@@ -1,8 +1,9 @@
 pub mod config;
 pub mod const_val;
 pub mod domain;
-pub mod routes;
+pub mod middleware;
 pub mod repository;
 pub mod router;
+pub mod routes;
 pub mod service;
 pub mod state;

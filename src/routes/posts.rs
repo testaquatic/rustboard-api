@@ -133,6 +133,7 @@ pub async fn create_post(
     State(state): State<AppState>,
     Json(input): Json<CreatePostInput>,
 ) -> Result<(StatusCode, Json<PostResponse>), ServiceError> {
+    tracing::debug!("게시글 생성 요청 수신");
     let post = state.posts_service.create(input).await?;
     Ok((StatusCode::CREATED, Json(post.into())))
 }

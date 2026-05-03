@@ -25,6 +25,12 @@ thiserror = "2"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 # axum 미들웨어 작성
 tower = "0.5"
+# 미들웨어
+tower-http = { version = "0.6", features = ["trace"] }
+# 구조화 로깅
+tracing = "0.1"
+# tracing를 터미널로 출력
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 # swagger
 utoipa = { version = "5", features = ["chrono"] }
 # axum에서 swagger사용

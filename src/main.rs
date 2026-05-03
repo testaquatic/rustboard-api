@@ -8,11 +8,21 @@ use rustboard_api::{
     state::AppState,
 };
 use sqlx::postgres::PgPoolOptions;
+use tower_http::trace::TraceLayer;
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // env 파일이 있으면 로드한다.
     dotenvy::dotenv().ok();
+
+    tracing_subscriber::registry()
+        .with(
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| "rustboard_api=debug,tower_http=debug".into()),
+        )
+        .with(tracing_subscriber::fmt::layer())
+        .init();
 
     // 설정 읽기
     let config = Arc::new(Config::from_env()?);
@@ -43,11 +53,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     // 라우터를 생성하고 상태 붙이기
-    let app = app_routes(&config).with_state(state);
+    let app = app_routes(&config)
+        .with_state(state)
+        .layer(TraceLayer::new_for_http())
+        .layer(axum::middleware::from_fn(
+            rustboard_api::middleware::request_id::add_request_id,
+        ));
 
     // 서버 시작
     let listener = tokio::net::TcpListener::bind(config.bind_addr).await?;
-    println!(
+    tracing::info!(
         "{} listening on http://{}",
         config.service_name,
         listener.local_addr()?
