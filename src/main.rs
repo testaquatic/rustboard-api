@@ -1,14 +1,22 @@
-use std::sync::Arc;
+use std::{net::SocketAddr, sync::Arc, time::Duration};
 
+use axum::{Json, Router, http::StatusCode, response::IntoResponse, routing::get};
 use rustboard_api::{
     config::Config,
+    middleware::{
+        rate_limit_error::rete_limit_error_response, rate_limit_key::ForwardedIpKeyExtractor,
+    },
     repository::{comment::PostgresCommentRepository, posts::PostgresPostRepository},
     router::app_routes,
     service::{comments::CommentService, posts::PostService},
     state::AppState,
 };
+use serde_json::json;
 use sqlx::postgres::PgPoolOptions;
-use tower_http::trace::TraceLayer;
+use tower_governor::{GovernorLayer, governor::GovernorConfigBuilder};
+use tower_http::{
+    compression::CompressionLayer, cors::CorsLayer, timeout::TimeoutLayer, trace::TraceLayer,
+};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 #[tokio::main]
@@ -52,14 +60,34 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         comments_service,
     };
 
+    let governor_conf = GovernorConfigBuilder::default()
+        .per_second(10)
+        .burst_size(30)
+        .key_extractor(ForwardedIpKeyExtractor)
+        .finish()
+        .unwrap();
+    let governor_layer = GovernorLayer::new(governor_conf).error_handler(rete_limit_error_response);
+
+    let admin_routes = Router::new()
+        .route("/admin/stats", get(admin_stats))
+        .route_layer(rustboard_api::middleware::ip_guard::AllowedIPLayer);
+
     // 라우터를 생성하고 상태 붙이기
-    let app = app_routes(&config)
+    let app = Router::new()
+        .merge(app_routes(&config))
+        .merge(admin_routes)
         .with_state(state)
+        .layer(CorsLayer::permissive())
+        .layer(CompressionLayer::new())
+        .layer(TimeoutLayer::with_status_code(
+            StatusCode::REQUEST_TIMEOUT,
+            Duration::from_secs(30),
+        ))
+        .layer(governor_layer)
         .layer(TraceLayer::new_for_http())
         .layer(axum::middleware::from_fn(
             rustboard_api::middleware::request_id::add_request_id,
         ));
-
     // 서버 시작
     let listener = tokio::net::TcpListener::bind(config.bind_addr).await?;
     tracing::info!(
@@ -68,7 +96,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         listener.local_addr()?
     );
 
-    axum::serve(listener, app).await?;
+    axum::serve(
+        listener,
+        app.into_make_service_with_connect_info::<SocketAddr>(),
+    )
+    .await?;
 
     Ok(())
+}
+
+async fn admin_stats() -> impl IntoResponse {
+    Json(json!({"total_posts": 43, "total_comments": 12}))
 }

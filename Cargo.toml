@@ -26,7 +26,8 @@ tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 # axum 미들웨어 작성
 tower = "0.5"
 # 미들웨어
-tower-http = { version = "0.6", features = ["trace"] }
+tower-http = { version = "0.6", features = ["compression-gzip", "cors", "timeout", "trace"] }
+tower_governor = { version = "0.8" }
 # 구조화 로깅
 tracing = "0.1"
 # tracing를 터미널로 출력
