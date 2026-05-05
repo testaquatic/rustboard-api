@@ -5,7 +5,7 @@ use sqlx::PgPool;
 
 use crate::{
     domain::comment::{Comment, CreateCommentInput},
-    repository::posts::RepositoryError,
+    repository::error::RepositoryError,
 };
 
 #[async_trait]
@@ -40,7 +40,7 @@ impl CommentRepository for PostgresCommentRepository {
         post_id: i64,
         input: CreateCommentInput,
     ) -> Result<Comment, RepositoryError> {
-        sqlx::query_as!(
+        let row = sqlx::query_as!(
             Comment,
             r#"
             INSERT INTO comments (post_id, body)
@@ -51,12 +51,13 @@ impl CommentRepository for PostgresCommentRepository {
             input.body
         )
         .fetch_one(&self.pool)
-        .await
-        .map_err(|_| RepositoryError::Backend)
+        .await?;
+
+        Ok(row)
     }
 
     async fn list_by_post(&self, post_id: i64) -> Result<Vec<Comment>, RepositoryError> {
-        sqlx::query_as!(
+        let row = sqlx::query_as!(
             Comment,
             r#"
             SELECT id, post_id, body, created_at, updated_at
@@ -67,12 +68,13 @@ impl CommentRepository for PostgresCommentRepository {
             post_id
         )
         .fetch_all(&self.pool)
-        .await
-        .map_err(|_| RepositoryError::Backend)
+        .await?;
+
+        Ok(row)
     }
 
     async fn find_by_id(&self, id: i64) -> Result<Option<Comment>, RepositoryError> {
-        sqlx::query_as!(
+        let row = sqlx::query_as!(
             Comment,
             r#"
             SELECT id, post_id, body, created_at, updated_at
@@ -82,7 +84,8 @@ impl CommentRepository for PostgresCommentRepository {
             id
         )
         .fetch_optional(&self.pool)
-        .await
-        .map_err(|_| RepositoryError::Backend)
+        .await?;
+
+        Ok(row)
     }
 }

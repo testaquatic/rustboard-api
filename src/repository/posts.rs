@@ -5,7 +5,10 @@ use chrono::{DateTime, Utc};
 use sqlx::PgPool;
 use tokio::sync::Mutex;
 
-use crate::domain::posts::{CreatePostInput, Post, UpdatePostInput};
+use crate::{
+    domain::posts::{CreatePostInput, Post, UpdatePostInput},
+    repository::error::RepositoryError,
+};
 
 /// 저장소 트레이트
 #[async_trait]
@@ -29,13 +32,6 @@ pub trait PostRepository {
     ) -> Result<Option<Post>, RepositoryError>;
     /// 게시글을 삭제한다.
     async fn delete(&self, id: i64) -> Result<bool, RepositoryError>;
-}
-
-/// 저장소 계층에서 반환하는 오류
-#[derive(Debug, thiserror::Error)]
-pub enum RepositoryError {
-    #[error("저장소 오류")]
-    Backend,
 }
 
 /// 메모리 저장소
@@ -157,7 +153,7 @@ impl PostgresPostRepository {
 #[async_trait]
 impl PostRepository for PostgresPostRepository {
     async fn insert(&self, input: CreatePostInput) -> Result<Post, RepositoryError> {
-        sqlx::query_as!(
+        let row = sqlx::query_as!(
             Post,
             r#"
             INSERT INTO posts (title, body)
@@ -168,12 +164,13 @@ impl PostRepository for PostgresPostRepository {
             input.body
         )
         .fetch_one(&self.pool)
-        .await
-        .map_err(|_| RepositoryError::Backend)
+        .await?;
+
+        Ok(row)
     }
 
     async fn find_by_id(&self, id: i64) -> Result<Option<Post>, RepositoryError> {
-        sqlx::query_as!(
+        let row = sqlx::query_as!(
             Post,
             r#"
             SELECT id, title, body, created_at, updated_at
@@ -183,8 +180,9 @@ impl PostRepository for PostgresPostRepository {
             id
         )
         .fetch_optional(&self.pool)
-        .await
-        .map_err(|_| RepositoryError::Backend)
+        .await?;
+
+        Ok(row)
     }
 
     async fn list(
@@ -192,7 +190,7 @@ impl PostRepository for PostgresPostRepository {
         cursor: Option<(DateTime<Utc>, i64)>,
         limit: i32,
     ) -> Result<Vec<Post>, RepositoryError> {
-        match cursor {
+        let row = match cursor {
             Some((ts, id)) => {
                 sqlx::query_as!(
                     Post,
@@ -224,8 +222,9 @@ impl PostRepository for PostgresPostRepository {
                 .fetch_all(&self.pool)
                 .await
             }
-        }
-        .map_err(|_| RepositoryError::Backend)
+        }?;
+
+        Ok(row)
     }
 
     async fn update(
@@ -233,7 +232,7 @@ impl PostRepository for PostgresPostRepository {
         id: i64,
         input: UpdatePostInput,
     ) -> Result<Option<Post>, RepositoryError> {
-        sqlx::query_as!(
+        let row = sqlx::query_as!(
             Post,
             r#"
             UPDATE posts
@@ -249,8 +248,9 @@ impl PostRepository for PostgresPostRepository {
             id
         )
         .fetch_optional(&self.pool)
-        .await
-        .map_err(|_| RepositoryError::Backend)
+        .await?;
+
+        Ok(row)
     }
 
     async fn delete(&self, id: i64) -> Result<bool, RepositoryError> {
@@ -262,8 +262,8 @@ impl PostRepository for PostgresPostRepository {
             id
         )
         .execute(&self.pool)
-        .await
-        .map_err(|_| RepositoryError::Backend)?;
+        .await?;
+
         Ok(result.rows_affected() == 1)
     }
 }

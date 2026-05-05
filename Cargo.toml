@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+anyhow = "1"
 # 트레이트에 async를 사용하기 편하게 만들어 준다.
 async-trait = "0.1"
 # http 프레임워크
@@ -12,11 +13,11 @@ axum = { version = "0.8", features = ["macros"]}
 chrono = { version = "0.4", features = ["serde"] }
 # .env파일에 환경 변수 주입
 dotenvy = "0.15"
+regex = "1"
 # 직렳화와 역직렬화
 serde = { version = "1", features = ["derive"] }
 # serde를 이용해서 json을 다를 수 있다.
 serde_json = "1"
-serde_with = "3.18.0"
 # 데이터베이스
 sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "postgres", "macros", "migrate", "chrono"] }
 # 오류를 편하게 생성할 수 있다.
@@ -27,6 +28,7 @@ tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 tower = "0.5"
 # 미들웨어
 tower-http = { version = "0.6", features = ["compression-gzip", "cors", "timeout", "trace"] }
+# 초당 요청 횟수 제한
 tower_governor = { version = "0.8" }
 # 구조화 로깅
 tracing = "0.1"

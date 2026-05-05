@@ -46,11 +46,11 @@ where
             let elapsed = start.elapsed();
 
             tracing::info!(
-              method = %method,
-              uri = %uri,
-              status = %response.status().as_u16(),
-              elapsed = %elapsed.as_millis(),
-              "요청 처리 완료 (Service 구현)"
+                method = %method,
+                uri = %uri,
+                status = %response.status().as_u16(),
+                elapsed = %elapsed.as_millis(),
+                "요청 처리 완료 (Service 구현)"
             );
 
             Ok(response)

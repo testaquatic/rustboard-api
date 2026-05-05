@@ -5,9 +5,7 @@ use axum::{
 };
 
 use crate::{
-    domain::comment::{CommentResponse, CreateCommentInput},
-    service::posts::{ErrorBody, ServiceError},
-    state::AppState,
+    domain::comment::{CommentResponse, CreateCommentInput}, error::{AppError, ErrorBody}, state::AppState
 };
 
 
@@ -44,7 +42,7 @@ pub async fn create_comment(
     State(state): State<AppState>,
     Path(post_id): Path<i64>,
     Json(input): Json<CreateCommentInput>,
-) -> Result<(StatusCode, Json<CommentResponse>), ServiceError> {
+) -> Result<(StatusCode, Json<CommentResponse>), AppError> {
     let comment = state.comments_service.create(post_id, input).await?;
     
     Ok((StatusCode::CREATED, Json(comment.into())))
@@ -73,7 +71,7 @@ pub async fn create_comment(
 pub async fn list_comments(
     State(state): State<AppState>,
     Path(post_id): Path<i64>,
-) -> Result<Json<Vec<CommentResponse>>, ServiceError> {
+) -> Result<Json<Vec<CommentResponse>>, AppError> {
   let comments = state.comments_service.list_by_post(post_id).await?;
   let body = comments.into_iter().map(CommentResponse::from).collect();
 
