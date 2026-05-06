@@ -8,7 +8,7 @@ use axum::{
 use serde::Serialize;
 use utoipa::ToSchema;
 
-use crate::service::posts::ServiceError;
+use crate::service::error::ServiceError;
 
 #[derive(Debug, thiserror::Error)]
 pub enum AppError {
@@ -81,6 +81,7 @@ impl From<ServiceError> for AppError {
             ServiceError::NotFound { entity, id } => AppError::NotFound { entity, id },
             ServiceError::Validation(msg) => AppError::Validation(msg),
             ServiceError::Repo(err) => AppError::Internal(err.into()),
+            ServiceError::PasswordHash(msg) => AppError::Internal(anyhow::anyhow!(msg)),
         }
     }
 }

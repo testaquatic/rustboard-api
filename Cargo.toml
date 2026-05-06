@@ -4,8 +4,11 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+# 오류 처리
 anyhow = "1"
-# 트레이트에 async를 사용하기 편하게 만들어 준다.
+# argon2id
+argon2 = "0.5"
+# #[async-tracit]
 async-trait = "0.1"
 # http 프레임워크
 axum = { version = "0.8", features = ["macros"]}
@@ -13,14 +16,18 @@ axum = { version = "0.8", features = ["macros"]}
 chrono = { version = "0.4", features = ["serde"] }
 # .env파일에 환경 변수 주입
 dotenvy = "0.15"
+password-hash = "0.5"
+# 솔트 생성
+rand_core = "0.10"
+# 정규표현식
 regex = "1"
-# 직렳화와 역직렬화
+# 직렬화와 역직렬화
 serde = { version = "1", features = ["derive"] }
-# serde를 이용해서 json을 다를 수 있다.
+# json
 serde_json = "1"
 # 데이터베이스
 sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "postgres", "macros", "migrate", "chrono"] }
-# 오류를 편하게 생성할 수 있다.
+# 오류
 thiserror = "2"
 # 비동기 런타임
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
@@ -38,7 +45,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 utoipa = { version = "5", features = ["chrono"] }
 # axum에서 swagger사용
 utoipa-axum = "0.2"
-# swagger Router 생성을 쉽게 할 수 있다.
+# swagger Router 생성.
 utoipa-swagger-ui = { version = "9", features = ["axum"] }
 # uuid
 uuid = { version = "1", features = ["v4"] }

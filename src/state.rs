@@ -4,7 +4,7 @@ use sqlx::PgPool;
 
 use crate::{
     config::Config,
-    service::{comments::CommentService, posts::PostService},
+    service::{comments::CommentService, posts::PostService, user::UserService},
 };
 
 /// 앱 상태
@@ -14,4 +14,5 @@ pub struct AppState {
     pub pool: PgPool,
     pub posts_service: Arc<PostService>,
     pub comments_service: Arc<CommentService>,
+    pub users_service: Arc<UserService>,
 }

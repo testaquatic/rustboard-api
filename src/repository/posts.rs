@@ -153,7 +153,7 @@ impl PostgresPostRepository {
 #[async_trait]
 impl PostRepository for PostgresPostRepository {
     async fn insert(&self, input: CreatePostInput) -> Result<Post, RepositoryError> {
-        let row = sqlx::query_as!(
+        sqlx::query_as!(
             Post,
             r#"
             INSERT INTO posts (title, body)
@@ -164,13 +164,12 @@ impl PostRepository for PostgresPostRepository {
             input.body
         )
         .fetch_one(&self.pool)
-        .await?;
-
-        Ok(row)
+        .await
+        .map_err(From::from)
     }
 
     async fn find_by_id(&self, id: i64) -> Result<Option<Post>, RepositoryError> {
-        let row = sqlx::query_as!(
+        sqlx::query_as!(
             Post,
             r#"
             SELECT id, title, body, created_at, updated_at
@@ -180,9 +179,8 @@ impl PostRepository for PostgresPostRepository {
             id
         )
         .fetch_optional(&self.pool)
-        .await?;
-
-        Ok(row)
+        .await
+        .map_err(From::from)
     }
 
     async fn list(
@@ -190,7 +188,7 @@ impl PostRepository for PostgresPostRepository {
         cursor: Option<(DateTime<Utc>, i64)>,
         limit: i32,
     ) -> Result<Vec<Post>, RepositoryError> {
-        let row = match cursor {
+        let users = match cursor {
             Some((ts, id)) => {
                 sqlx::query_as!(
                     Post,
@@ -206,7 +204,7 @@ impl PostRepository for PostgresPostRepository {
                     limit as i64
                 )
                 .fetch_all(&self.pool)
-                .await
+                .await?
             }
             None => {
                 sqlx::query_as!(
@@ -220,11 +218,11 @@ impl PostRepository for PostgresPostRepository {
                     limit as i64
                 )
                 .fetch_all(&self.pool)
-                .await
+                .await?
             }
-        }?;
+        };
 
-        Ok(row)
+        Ok(users)
     }
 
     async fn update(
@@ -232,7 +230,7 @@ impl PostRepository for PostgresPostRepository {
         id: i64,
         input: UpdatePostInput,
     ) -> Result<Option<Post>, RepositoryError> {
-        let row = sqlx::query_as!(
+        sqlx::query_as!(
             Post,
             r#"
             UPDATE posts
@@ -248,13 +246,12 @@ impl PostRepository for PostgresPostRepository {
             id
         )
         .fetch_optional(&self.pool)
-        .await?;
-
-        Ok(row)
+        .await
+        .map_err(From::from)
     }
 
     async fn delete(&self, id: i64) -> Result<bool, RepositoryError> {
-        let result = sqlx::query!(
+        sqlx::query!(
             r#"
             DELETE FROM posts
             WHERE id = $1
@@ -262,8 +259,8 @@ impl PostRepository for PostgresPostRepository {
             id
         )
         .execute(&self.pool)
-        .await?;
-
-        Ok(result.rows_affected() == 1)
+        .await
+        .map(|result| result.rows_affected() == 1)
+        .map_err(From::from)
     }
 }

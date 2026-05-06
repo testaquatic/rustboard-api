@@ -1,6 +1,6 @@
 -- posts에 저장한 모든 글을 불러온다.
 
-SELECT id, title, left(body, 20) FROM posts ORDER BY id;
+SELECT id, title, LEDFT(body, 20) FROM posts ORDER BY id;
 
 EXPLAIN ANALYZE
 SELECT id FROM posts ORDER BY created_at DESC LIMIT 50 OFFSET 99950;
@@ -28,3 +28,5 @@ FROM comments
 WHERE post_id = 1
 ORDER BY created_at DESC, id DESC
 LIMIT 20;
+
+SELECT email, LEFT(password_hash, 300) FROM users WHERE email = 'bob@example.com';

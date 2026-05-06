@@ -1,3 +1,4 @@
+pub mod auth;
 pub mod config;
 pub mod const_val;
 pub mod domain;

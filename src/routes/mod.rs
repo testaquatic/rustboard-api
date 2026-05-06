@@ -1,3 +1,4 @@
+pub mod auth;
 pub mod comments;
 pub mod meta;
 pub mod posts;

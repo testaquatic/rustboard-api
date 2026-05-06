@@ -6,9 +6,12 @@ use rustboard_api::{
     middleware::{
         rate_limit_error::rete_limit_error_response, rate_limit_key::ForwardedIpKeyExtractor,
     },
-    repository::{comment::PostgresCommentRepository, posts::PostgresPostRepository},
+    repository::{
+        comment::PostgresCommentRepository, posts::PostgresPostRepository,
+        user::PostgresUserRepository,
+    },
     router::app_routes,
-    service::{comments::CommentService, posts::PostService},
+    service::{comments::CommentService, posts::PostService, user::UserService},
     state::AppState,
 };
 use serde_json::json;
@@ -51,6 +54,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 서비스 초기화
     let posts_service = Arc::new(PostService::new(posts_repo.clone()));
     let comments_service = Arc::new(CommentService::new(posts_repo, comments_repo));
+    let user_repo = Arc::new(PostgresUserRepository::new(pool.clone()));
+    let users_service = Arc::new(UserService::new(user_repo));
 
     // AppState 생성
     let state = AppState {
@@ -58,6 +63,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         pool,
         posts_service,
         comments_service,
+        users_service,
     };
 
     let governor_conf = GovernorConfigBuilder::default()

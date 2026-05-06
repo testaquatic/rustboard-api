@@ -3,7 +3,7 @@ use std::sync::Arc;
 use crate::{
     domain::comment::{Comment, CreateCommentInput},
     repository::{comment::CommentRepository, posts::PostRepository},
-    service::posts::ServiceError,
+    service::error::ServiceError,
 };
 
 pub struct CommentService {
