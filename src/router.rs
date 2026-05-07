@@ -55,7 +55,9 @@ fn comments_routes() -> Router<AppState> {
 
 /// 인증 라우터
 fn auth_routes() -> Router<AppState> {
-    Router::new().route("/signup", post(auth::signup))
+    Router::new()
+        .route("/signup", post(auth::signup))
+        .route("/login", post(auth::login))
 }
 
 /// swegger 지원을 위한 라우터

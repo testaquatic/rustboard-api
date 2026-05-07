@@ -16,6 +16,7 @@ axum = { version = "0.8", features = ["macros"]}
 chrono = { version = "0.4", features = ["serde"] }
 # .env파일에 환경 변수 주입
 dotenvy = "0.15"
+jsonwebtoken = { version = "10", features = ["rust_crypto"] }
 password-hash = "0.5"
 # 솔트 생성
 rand_core = "0.10"
