@@ -14,4 +14,7 @@ pub enum ServiceError {
 
     #[error("비밀번호 처리 오류")]
     PasswordHash(String),
+
+    #[error("권한이 없습니다")]
+    Forbidden,
 }

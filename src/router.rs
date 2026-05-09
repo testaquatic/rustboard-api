@@ -1,6 +1,6 @@
 use axum::{
-    Router,
-    routing::{get, post},
+    Router, middleware,
+    routing::{get, patch, post},
 };
 use utoipa::{
     OpenApi,
@@ -9,6 +9,7 @@ use utoipa::{
 use utoipa_swagger_ui::SwaggerUi;
 
 use crate::{
+    auth::extractor::AuthUser,
     config::Config,
     const_val::PKG_VERSION,
     routes::{
@@ -21,43 +22,47 @@ use crate::{
 };
 
 /// axum 라우터
-pub fn app_routes(config: &Config) -> Router<AppState> {
+pub fn app_routes(config: &Config, state: AppState) -> Router<AppState> {
     Router::new()
-        .route("/health", get(health))
-        .route("/version", get(version))
-        // /posts
-        .merge(posts_routes())
-        // /posts/{post_id}/comments
-        .merge(comments_routes())
-        // /signup
-        .merge(auth_routes())
+        // 인증 없이 접근 가능한 라우터
+        .merge(public_routes())
+        // 인증이 필요한 라우터
+        .merge(
+            protected_routes()
+                .route_layer(middleware::from_extractor_with_state::<AuthUser, _>(state)),
+        )
         // /swagger
         .merge(openapi_router(config))
 }
 
-/// 게시글 라우터
-fn posts_routes() -> Router<AppState> {
+/// 인증 없이 접근 가능한 라우터
+pub fn public_routes() -> Router<AppState> {
     Router::new()
-        .route("/posts", get(list_posts).post(create_post))
-        .route(
-            "/posts/{id}",
-            get(get_post).patch(update_post).delete(delete_post),
-        )
-}
-
-/// 댓글 라우터
-fn comments_routes() -> Router<AppState> {
-    Router::new().route(
-        "/posts/{post_id}/comments",
-        get(list_comments).post(create_comment),
-    )
-}
-
-/// 인증 라우터
-fn auth_routes() -> Router<AppState> {
-    Router::new()
+        // 헬스 체크
+        .route("/health", get(health))
+        // 버전 체크
+        .route("/version", get(version))
+        // 회원 가입
         .route("/signup", post(auth::signup))
+        // 로그인
         .route("/login", post(auth::login))
+        // 글 목록
+        .route("/posts", get(list_posts))
+        // 글 조회
+        .route("/posts/{id}", get(get_post))
+        // 댓글 목록
+        .route("/posts/{post_id}/comments", get(list_comments))
+}
+
+/// 인증이 필요한 라우터
+pub fn protected_routes() -> Router<AppState> {
+    Router::new()
+        // 글 작성
+        .route("/posts", post(create_post))
+        // 글 작성과 삭제
+        .route("/posts/{id}", patch(update_post).delete(delete_post))
+        // 댓글 작성
+        .route("/posts/{post_id}/comments", post(create_comment))
 }
 
 /// swegger 지원을 위한 라우터

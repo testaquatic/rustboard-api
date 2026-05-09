@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, ToSchema};
 
 use crate::{
+    auth::extractor::AuthUser,
     domain::posts::{CreatePostInput, Post, PostResponse, UpdatePostInput},
     error::{AppError, ErrorBody},
     state::AppState,
@@ -46,10 +47,11 @@ const MAX_LIMIT: i32 = 100;
 )]
 pub async fn create_post(
     State(state): State<AppState>,
+    auth_user: AuthUser,
     Json(input): Json<CreatePostInput>,
 ) -> Result<(StatusCode, Json<PostResponse>), AppError> {
     tracing::debug!("게시글 생성 요청 수신");
-    let post = state.posts_service.create(input).await?;
+    let post = state.posts_service.create(input, auth_user.user_id).await?;
     Ok((StatusCode::CREATED, Json(post.into())))
 }
 
@@ -164,10 +166,14 @@ fn format_cursor(ts: DateTime<Utc>, id: i64) -> String {
 )]
 pub async fn update_post(
     State(state): State<AppState>,
+    auth_user: AuthUser,
     Path(id): Path<i64>,
     Json(input): Json<UpdatePostInput>,
 ) -> Result<Json<PostResponse>, AppError> {
-    let post = state.posts_service.update(id, input).await?;
+    let post = state
+        .posts_service
+        .update(id, input, auth_user.user_id, &auth_user.role)
+        .await?;
     Ok(Json(post.into()))
 }
 
@@ -192,8 +198,12 @@ pub async fn update_post(
 pub async fn delete_post(
     State(state): State<AppState>,
     Path(id): Path<i64>,
+    auth_user: AuthUser,
 ) -> Result<StatusCode, AppError> {
-    state.posts_service.delete(id).await?;
+    state
+        .posts_service
+        .delete(id, auth_user.user_id, &auth_user.role)
+        .await?;
 
     Ok(StatusCode::NO_CONTENT)
 }

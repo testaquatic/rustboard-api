@@ -26,7 +26,9 @@ impl CommentService {
         &self,
         post_id: i64,
         input: CreateCommentInput,
+        requester_id: i64,
     ) -> Result<Comment, ServiceError> {
+        let _ = requester_id;
         if input.body.trim().is_empty() {
             return Err(ServiceError::Validation("내용이 없습니다".into()));
         }
@@ -50,5 +52,11 @@ impl CommentService {
             .list_by_post(post_id)
             .await
             .map_err(From::from)
+    }
+
+    pub async fn delete_comment(&self, comment_id: i64) -> Result<(), ServiceError> {
+        self.comments_repo.delete(comment_id).await?;
+
+        Ok(())
     }
 }

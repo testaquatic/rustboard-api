@@ -80,7 +80,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // 라우터를 생성하고 상태 붙이기
     let app = Router::new()
-        .merge(app_routes(&config))
+        .merge(app_routes(&config, state.clone()))
         .merge(admin_routes)
         .with_state(state)
         .layer(CorsLayer::permissive())

@@ -19,6 +19,8 @@ pub trait CommentRepository {
     async fn list_by_post(&self, post_id: i64) -> Result<Vec<Comment>, RepositoryError>;
 
     async fn find_by_id(&self, id: i64) -> Result<Option<Comment>, RepositoryError>;
+
+    async fn delete(&self, id: i64) -> Result<bool, RepositoryError>;
 }
 
 pub type DynCommentRepository = Arc<dyn CommentRepository + Send + Sync>;
@@ -87,5 +89,19 @@ impl CommentRepository for PostgresCommentRepository {
         .await?;
 
         Ok(row)
+    }
+
+    async fn delete(&self, id: i64) -> Result<bool, RepositoryError> {
+        sqlx::query!(
+            r#"
+            DELETE FROM comments
+            WHERE id = $1
+            "#,
+            id
+        )
+        .execute(&self.pool)
+        .await
+        .map(|result| result.rows_affected() == 1)
+        .map_err(From::from)
     }
 }

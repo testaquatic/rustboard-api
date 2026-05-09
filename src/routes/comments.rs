@@ -5,7 +5,7 @@ use axum::{
 };
 
 use crate::{
-    domain::comment::{CommentResponse, CreateCommentInput}, error::{AppError, ErrorBody}, state::AppState
+    auth::extractor::AuthUser, domain::comment::{CommentResponse, CreateCommentInput}, error::{AppError, ErrorBody}, state::AppState
 };
 
 
@@ -41,9 +41,10 @@ use crate::{
 pub async fn create_comment(
     State(state): State<AppState>,
     Path(post_id): Path<i64>,
+    auth_user: AuthUser,
     Json(input): Json<CreateCommentInput>,
 ) -> Result<(StatusCode, Json<CommentResponse>), AppError> {
-    let comment = state.comments_service.create(post_id, input).await?;
+    let comment = state.comments_service.create(post_id, input, auth_user.user_id).await?;
     
     Ok((StatusCode::CREATED, Json(comment.into())))
 }

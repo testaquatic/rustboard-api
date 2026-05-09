@@ -14,7 +14,8 @@ use crate::{
 #[async_trait]
 pub trait PostRepository {
     /// 저장소에 글을 저장한다.
-    async fn insert(&self, input: CreatePostInput) -> Result<Post, RepositoryError>;
+    async fn insert(&self, input: CreatePostInput, author_id: i64)
+    -> Result<Post, RepositoryError>;
     /// id를 기준으로 글을 불러온다.
     async fn find_by_id(&self, id: i64) -> Result<Option<Post>, RepositoryError>;
     /// 모든 글을 불러온다.
@@ -56,14 +57,19 @@ impl InMemoryPostRepository {
 
 #[async_trait]
 impl PostRepository for InMemoryPostRepository {
-    async fn insert(&self, input: CreatePostInput) -> Result<Post, RepositoryError> {
+    async fn insert(
+        &self,
+        input: CreatePostInput,
+        author_id: i64,
+    ) -> Result<Post, RepositoryError> {
         let mut state = self.inner.lock().await;
         let id = state.next_id;
         state.next_id += 1;
         let post = Post {
             id,
             title: input.title,
-            body: input.body,
+            body: input.content,
+            author_id,
             created_at: chrono::Utc::now(),
             updated_at: chrono::Utc::now(),
         };
@@ -152,16 +158,21 @@ impl PostgresPostRepository {
 
 #[async_trait]
 impl PostRepository for PostgresPostRepository {
-    async fn insert(&self, input: CreatePostInput) -> Result<Post, RepositoryError> {
+    async fn insert(
+        &self,
+        input: CreatePostInput,
+        author_id: i64,
+    ) -> Result<Post, RepositoryError> {
         sqlx::query_as!(
             Post,
             r#"
-            INSERT INTO posts (title, body)
-            VALUES ($1, $2)
-            RETURNING id, title, body, created_at, updated_at
+            INSERT INTO posts (title, body, author_id)
+            VALUES ($1, $2, $3)
+            RETURNING id, title, body, author_id, created_at, updated_at
             "#,
             input.title,
-            input.body
+            input.content,
+            author_id
         )
         .fetch_one(&self.pool)
         .await
@@ -172,7 +183,7 @@ impl PostRepository for PostgresPostRepository {
         sqlx::query_as!(
             Post,
             r#"
-            SELECT id, title, body, created_at, updated_at
+            SELECT id, title, body, author_id, created_at, updated_at
             FROM posts
             WHERE id = $1
             "#,
@@ -193,7 +204,7 @@ impl PostRepository for PostgresPostRepository {
                 sqlx::query_as!(
                     Post,
                     r#"
-                    SELECT id, title, body, created_at, updated_at
+                    SELECT id, title, body, author_id, created_at, updated_at
                     FROM posts
                     WHERE (created_at, id) < ($1, $2)
                     ORDER BY created_at DESC, id DESC
@@ -210,7 +221,7 @@ impl PostRepository for PostgresPostRepository {
                 sqlx::query_as!(
                     Post,
                     r#"
-                    SELECT id, title, body, created_at, updated_at
+                    SELECT id, title, body, author_id, created_at, updated_at
                     FROM posts
                     ORDER BY created_at DESC, id DESC
                     LIMIT $1
@@ -239,7 +250,7 @@ impl PostRepository for PostgresPostRepository {
                 body = COALESCE($2, body), 
                 updated_at = NOW()
             WHERE id = $3
-            RETURNING id, title, body, created_at, updated_at
+            RETURNING id, title, body, author_id, created_at, updated_at
             "#,
             input.title,
             input.body,
