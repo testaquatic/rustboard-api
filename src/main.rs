@@ -1,20 +1,19 @@
 use std::{net::SocketAddr, sync::Arc, time::Duration};
 
-use axum::{Json, Router, http::StatusCode, response::IntoResponse, routing::get};
+use axum::http::StatusCode;
 use rustboard_api::{
     config::Config,
     middleware::{
-        rate_limit_error::rete_limit_error_response, rate_limit_key::ForwardedIpKeyExtractor,
+        self, rate_limit_error::rete_limit_error_response, rate_limit_key::ForwardedIpKeyExtractor,
     },
     repository::{
         comment::PostgresCommentRepository, posts::PostgresPostRepository,
         user::PostgresUserRepository,
     },
-    router::app_routes,
+    router::create_router,
     service::{comments::CommentService, posts::PostService, user::UserService},
     state::AppState,
 };
-use serde_json::json;
 use sqlx::postgres::PgPoolOptions;
 use tower_governor::{GovernorLayer, governor::GovernorConfigBuilder};
 use tower_http::{
@@ -60,12 +59,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // AppState 생성
     let state = AppState {
         config: config.clone(),
-        pool,
         posts_service,
         comments_service,
         users_service,
     };
 
+    // 동시 접속수를 제한하는 레이어
     let governor_conf = GovernorConfigBuilder::default()
         .per_second(10)
         .burst_size(30)
@@ -74,15 +73,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .unwrap();
     let governor_layer = GovernorLayer::new(governor_conf).error_handler(rete_limit_error_response);
 
-    let admin_routes = Router::new()
-        .route("/admin/stats", get(admin_stats))
-        .route_layer(rustboard_api::middleware::ip_guard::AllowedIPLayer);
-
     // 라우터를 생성하고 상태 붙이기
-    let app = Router::new()
-        .merge(app_routes(&config, state.clone()))
-        .merge(admin_routes)
-        .with_state(state)
+    let app = create_router(&config, state.clone())
         .layer(CorsLayer::permissive())
         .layer(CompressionLayer::new())
         .layer(TimeoutLayer::with_status_code(
@@ -92,8 +84,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .layer(governor_layer)
         .layer(TraceLayer::new_for_http())
         .layer(axum::middleware::from_fn(
-            rustboard_api::middleware::request_id::add_request_id,
+            middleware::request_id::add_request_id,
         ));
+
     // 서버 시작
     let listener = tokio::net::TcpListener::bind(config.bind_addr).await?;
     tracing::info!(
@@ -109,8 +102,4 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     .await?;
 
     Ok(())
-}
-
-async fn admin_stats() -> impl IntoResponse {
-    Json(json!({"total_posts": 43, "total_comments": 12}))
 }

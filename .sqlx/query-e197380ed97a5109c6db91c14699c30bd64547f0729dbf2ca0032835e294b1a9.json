@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            INSERT INTO posts (title, body)\n            VALUES ($1, $2)\n            RETURNING id, title, body, created_at, updated_at\n            ",
+  "query": "\n                    SELECT id, title, body, author_id, created_at, updated_at\n                    FROM posts\n                    WHERE (created_at, id) < ($1, $2)\n                    ORDER BY created_at DESC, id DESC\n                    LIMIT $3\n                    ",
   "describe": {
     "columns": [
       {
@@ -20,19 +20,25 @@
       },
       {
         "ordinal": 3,
+        "name": "author_id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 4,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 4,
+        "ordinal": 5,
         "name": "updated_at",
         "type_info": "Timestamptz"
       }
     ],
     "parameters": {
       "Left": [
-        "Text",
-        "Text"
+        "Timestamptz",
+        "Int8",
+        "Int8"
       ]
     },
     "nullable": [
@@ -40,8 +46,9 @@
       false,
       false,
       false,
+      false,
       false
     ]
   },
-  "hash": "3bf30990ed288d912e0189388ebd9194844fa2d354ad52d9658fe11a536bfe7c"
+  "hash": "e197380ed97a5109c6db91c14699c30bd64547f0729dbf2ca0032835e294b1a9"
 }

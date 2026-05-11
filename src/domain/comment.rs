@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 /// 댓글 데이터 모델
+#[derive(Clone)]
 pub struct Comment {
     pub id: i64,
     pub post_id: i64,

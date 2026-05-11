@@ -84,3 +84,8 @@ pub async fn version(State(state): State<AppState>) -> impl IntoResponse {
 #[derive(utoipa::OpenApi)]
 #[openapi(paths(version), components(schemas(VersionResponse)))]
 pub struct VersionOpenApi;
+
+#[cfg(test)]
+mod tests {
+    
+}

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n                    SELECT id, title, body, created_at, updated_at\n                    FROM posts\n                    ORDER BY created_at DESC, id DESC\n                    LIMIT $1\n                    ",
+  "query": "\n                    SELECT id, title, body, author_id, created_at, updated_at\n                    FROM posts\n                    ORDER BY created_at DESC, id DESC\n                    LIMIT $1\n                    ",
   "describe": {
     "columns": [
       {
@@ -20,11 +20,16 @@
       },
       {
         "ordinal": 3,
+        "name": "author_id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 4,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 4,
+        "ordinal": 5,
         "name": "updated_at",
         "type_info": "Timestamptz"
       }
@@ -39,8 +44,9 @@
       false,
       false,
       false,
+      false,
       false
     ]
   },
-  "hash": "4241dc421395713ea69b9deb7431281e0c869041837d15f8456901be6c22738e"
+  "hash": "ceebae74b060b428405baab47caf3b6ffbd3c7e40a13f766fe1950b162504484"
 }

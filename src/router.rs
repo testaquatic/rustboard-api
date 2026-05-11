@@ -1,7 +1,9 @@
 use axum::{
-    Router, middleware,
+    Json, Router,
+    response::IntoResponse,
     routing::{get, patch, post},
 };
+use serde_json::json;
 use utoipa::{
     OpenApi,
     openapi::{Info, OpenApiBuilder},
@@ -9,9 +11,9 @@ use utoipa::{
 use utoipa_swagger_ui::SwaggerUi;
 
 use crate::{
-    auth::extractor::AuthUser,
     config::Config,
     const_val::PKG_VERSION,
+    middleware::{self, auth::AuthMiddleware},
     routes::{
         auth::{self, AuthOpenApi},
         comments::{CommentsOpenApi, create_comment, list_comments},
@@ -22,17 +24,19 @@ use crate::{
 };
 
 /// axum 라우터
-pub fn app_routes(config: &Config, state: AppState) -> Router<AppState> {
+pub fn create_router(config: &Config, state: AppState) -> Router {
     Router::new()
         // 인증 없이 접근 가능한 라우터
         .merge(public_routes())
         // 인증이 필요한 라우터
-        .merge(
-            protected_routes()
-                .route_layer(middleware::from_extractor_with_state::<AuthUser, _>(state)),
-        )
+        .merge(protected_routes().route_layer(AuthMiddleware {
+            state: state.clone(),
+        }))
         // /swagger
         .merge(openapi_router(config))
+        // /admin
+        .merge(admin_routes())
+        .with_state(state)
 }
 
 /// 인증 없이 접근 가능한 라우터
@@ -63,6 +67,16 @@ pub fn protected_routes() -> Router<AppState> {
         .route("/posts/{id}", patch(update_post).delete(delete_post))
         // 댓글 작성
         .route("/posts/{post_id}/comments", post(create_comment))
+}
+
+pub fn admin_routes() -> Router<AppState> {
+    Router::new()
+        .route("/admin/stats", get(admin_stats))
+        .route_layer(middleware::ip_guard::AllowedIPLayer)
+}
+
+async fn admin_stats() -> impl IntoResponse {
+    Json(json!({"total_posts": 43, "total_comments": 12}))
 }
 
 /// swegger 지원을 위한 라우터

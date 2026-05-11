@@ -1,7 +1,8 @@
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 use async_trait::async_trait;
 use sqlx::PgPool;
+use tokio::sync::Mutex;
 
 use crate::{
     domain::comment::{Comment, CreateCommentInput},
@@ -103,5 +104,84 @@ impl CommentRepository for PostgresCommentRepository {
         .await
         .map(|result| result.rows_affected() == 1)
         .map_err(From::from)
+    }
+}
+
+pub struct InMemoryCommentState {
+    next_id: i64,
+    items: HashMap<i64, Comment>,
+}
+
+/// 글을 잘못 따라갔는지 안 보여서 직접 구현했다.
+pub struct InMemoryCommentRepository {
+    inner: Mutex<InMemoryCommentState>,
+}
+
+impl InMemoryCommentRepository {
+    pub fn new() -> Self {
+        Self {
+            inner: Mutex::new(InMemoryCommentState {
+                next_id: 1,
+                items: HashMap::new(),
+            }),
+        }
+    }
+}
+
+impl Default for InMemoryCommentRepository {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[async_trait]
+impl CommentRepository for InMemoryCommentRepository {
+    async fn insert(
+        &self,
+        post_id: i64,
+        input: CreateCommentInput,
+    ) -> Result<Comment, RepositoryError> {
+        let mut state = self.inner.lock().await;
+        let id = state.next_id;
+        state.next_id += 1;
+        let comment = Comment {
+            id,
+            post_id,
+            body: input.body,
+            created_at: chrono::Utc::now(),
+            updated_at: chrono::Utc::now(),
+        };
+        state.items.insert(id, comment.clone());
+
+        Ok(comment)
+    }
+
+    async fn list_by_post(&self, post_id: i64) -> Result<Vec<Comment>, RepositoryError> {
+        let state = self.inner.lock().await;
+        let mut items = state
+            .items
+            .values()
+            .filter(|comment| comment.post_id == post_id)
+            .cloned()
+            .collect::<Vec<_>>();
+
+        items.sort_by(|a, b| match b.created_at.cmp(&a.created_at) {
+            std::cmp::Ordering::Equal => b.id.cmp(&a.id),
+            ord => ord,
+        });
+
+        Ok(items)
+    }
+
+    async fn find_by_id(&self, id: i64) -> Result<Option<Comment>, RepositoryError> {
+        let state = self.inner.lock().await;
+        Ok(state.items.get(&id).cloned())
+    }
+
+    async fn delete(&self, id: i64) -> Result<bool, RepositoryError> {
+        let mut state = self.inner.lock().await;
+        let removed = state.items.remove(&id);
+
+        Ok(removed.is_some())
     }
 }

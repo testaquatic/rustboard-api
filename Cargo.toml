@@ -16,6 +16,8 @@ axum = { version = "0.8", features = ["macros"]}
 chrono = { version = "0.4", features = ["serde"] }
 # .env파일에 환경 변수 주입
 dotenvy = "0.15"
+http-body-util = "0.1"
+# JWT
 jsonwebtoken = { version = "10", features = ["rust_crypto"] }
 password-hash = "0.5"
 # 솔트 생성
@@ -33,7 +35,7 @@ thiserror = "2"
 # 비동기 런타임
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 # axum 미들웨어 작성
-tower = "0.5"
+tower = { version = "0.5", features = ["util"] }
 # 미들웨어
 tower-http = { version = "0.6", features = ["compression-gzip", "cors", "timeout", "trace"] }
 # 초당 요청 횟수 제한
@@ -50,3 +52,9 @@ utoipa-axum = "0.2"
 utoipa-swagger-ui = { version = "9", features = ["axum"] }
 # uuid
 uuid = { version = "1", features = ["v4"] }
+
+[dev-dependencies]
+insta = { version = "1", features = ["json", "yaml"] }
+# 테스트용 도커 컨테이너
+testcontainers = "0.27"
+testcontainers-modules = { version = "0.15", features = ["postgres"] }

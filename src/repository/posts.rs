@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{cmp::Ordering, collections::HashMap, sync::Arc};
 
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
@@ -9,6 +9,8 @@ use crate::{
     domain::posts::{CreatePostInput, Post, UpdatePostInput},
     repository::error::RepositoryError,
 };
+
+pub type DynPostRepository = Arc<dyn PostRepository + Send + Sync>;
 
 /// 저장소 트레이트
 #[async_trait]
@@ -37,9 +39,9 @@ pub trait PostRepository {
 
 /// 메모리 저장소
 #[derive(Default)]
-struct InMemoryState {
-    next_id: i64,
-    items: HashMap<i64, Post>,
+pub struct InMemoryState {
+    pub next_id: i64,
+    pub items: HashMap<i64, Post>,
 }
 
 #[derive(Default)]
@@ -52,6 +54,10 @@ impl InMemoryPostRepository {
         Self {
             inner: Mutex::new(InMemoryState::default()),
         }
+    }
+
+    pub async fn lock(&self) -> tokio::sync::MutexGuard<'_, InMemoryState> {
+        self.inner.lock().await
     }
 }
 
@@ -89,7 +95,7 @@ impl PostRepository for InMemoryPostRepository {
         limit: i32,
     ) -> Result<Vec<Post>, RepositoryError> {
         let state = self.inner.lock().await;
-        let mut item = state
+        let mut items = state
             .items
             .iter()
             .filter_map(|(id, post)| match cursor {
@@ -104,12 +110,15 @@ impl PostRepository for InMemoryPostRepository {
             })
             .cloned()
             .collect::<Vec<_>>();
-        item.sort_by_key(|p| p.id);
-        Ok(item
-            .chunks(limit as usize)
-            .next()
-            .map(ToOwned::to_owned)
-            .unwrap_or_default())
+
+        items.sort_by(|a, b| match a.created_at.cmp(&b.created_at) {
+            Ordering::Equal => a.id.cmp(&b.id),
+            ord => ord,
+        });
+
+        items.truncate(limit as usize);
+
+        Ok(items)
     }
 
     async fn update(
@@ -121,7 +130,7 @@ impl PostRepository for InMemoryPostRepository {
 
         // id에 해당하는 Post가 없으면 Ok(None)을 반환한다.
         let Some(post) = state.items.get_mut(&id) else {
-            return Ok(None);
+            return Result::<_, RepositoryError>::Ok(None);
         };
 
         // post를 수정한다.

@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use chrono::{DateTime, Utc};
 
 use crate::{
@@ -7,11 +5,9 @@ use crate::{
         posts::{CreatePostInput, Post, UpdatePostInput},
         role::Role,
     },
-    repository::posts::PostRepository,
+    repository::posts::DynPostRepository,
     service::{check_ownership, error::ServiceError},
 };
-
-pub type DynPostRepository = Arc<dyn PostRepository + Send + Sync>;
 
 const TITLE_MAX: usize = 200;
 const BODY_MAX: usize = 10_000;

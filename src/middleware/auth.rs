@@ -9,8 +9,9 @@ use tower::{Layer, Service};
 
 use crate::{auth::extractor::AuthUser, state::AppState};
 
+#[derive(Clone)]
 pub struct AuthMiddleware {
-    state: AppState,
+    pub state: AppState,
 }
 
 impl<S> Layer<S> for AuthMiddleware {

@@ -1,7 +1,5 @@
 use std::sync::Arc;
 
-use sqlx::PgPool;
-
 use crate::{
     config::Config,
     service::{comments::CommentService, posts::PostService, user::UserService},
@@ -11,7 +9,6 @@ use crate::{
 #[derive(Clone)]
 pub struct AppState {
     pub config: Arc<Config>,
-    pub pool: PgPool,
     pub posts_service: Arc<PostService>,
     pub comments_service: Arc<CommentService>,
     pub users_service: Arc<UserService>,

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            UPDATE posts\n            SET \n                title = COALESCE($1, title),\n                body = COALESCE($2, body), \n                updated_at = NOW()\n            WHERE id = $3\n            RETURNING id, title, body, created_at, updated_at\n            ",
+  "query": "\n            SELECT id, title, body, author_id, created_at, updated_at\n            FROM posts\n            WHERE id = $1\n            ",
   "describe": {
     "columns": [
       {
@@ -20,19 +20,22 @@
       },
       {
         "ordinal": 3,
+        "name": "author_id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 4,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 4,
+        "ordinal": 5,
         "name": "updated_at",
         "type_info": "Timestamptz"
       }
     ],
     "parameters": {
       "Left": [
-        "Text",
-        "Text",
         "Int8"
       ]
     },
@@ -41,8 +44,9 @@
       false,
       false,
       false,
+      false,
       false
     ]
   },
-  "hash": "7821e77d978190ee45f86dbea9570da34f738b329659e029148acdcddb74897d"
+  "hash": "e3cdb397ea8f33ed661ddfa57b7133784af9d8e2390375171bb3b21363c3534a"
 }

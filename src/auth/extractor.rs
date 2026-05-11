@@ -23,7 +23,7 @@ impl AuthUser {
         Ok(Self {
             user_id,
             email: claims.email,
-            role: role,
+            role,
         })
     }
 
