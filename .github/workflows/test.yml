@@ -31,6 +31,9 @@ jobs:
         env:
           SQLX_OFFLINE: "true"
 
+      - name: Install insta
+        uses: taiki-e/install-action@insta
+
       - name: Check snapshot
         run: cargo insta test --check
         env:
