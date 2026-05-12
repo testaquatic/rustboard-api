@@ -32,7 +32,7 @@ jobs:
           SQLX_OFFLINE: "true"
 
       - name: Install insta
-        uses: taiki-e/install-action@insta
+        uses: taiki-e/install-action@cargo-insta
 
       - name: Check snapshot
         run: cargo insta test --check
