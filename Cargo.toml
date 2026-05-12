@@ -54,7 +54,8 @@ utoipa-swagger-ui = { version = "9", features = ["axum"] }
 uuid = { version = "1", features = ["v4"] }
 
 [dev-dependencies]
-insta = { version = "1", features = ["json", "yaml"] }
+# 스냅샷 테스트
+insta = { version = "1", features = ["json", "yaml", "redactions"] }
 # 테스트용 도커 컨테이너
 testcontainers = "0.27"
 testcontainers-modules = { version = "0.15", features = ["postgres"] }

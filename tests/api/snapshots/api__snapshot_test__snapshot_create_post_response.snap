@@ -1,0 +1,12 @@
+---
+source: tests/api/snapshot_test.rs
+expression: json
+---
+{
+  "author_id": "[author_id]",
+  "body": "이 응답 구조를 고정합니다",
+  "created_at": "[created_at]",
+  "id": "[id]",
+  "title": "스냅샷 테스트 글",
+  "updated_at": "[updated_at]"
+}

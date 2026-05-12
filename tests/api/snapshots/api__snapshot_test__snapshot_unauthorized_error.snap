@@ -1,0 +1,8 @@
+---
+source: tests/api/snapshot_test.rs
+expression: json
+---
+{
+  "error": "unauthorized",
+  "message": "[message]"
+}

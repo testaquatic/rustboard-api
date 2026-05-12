@@ -1,0 +1,22 @@
+---
+source: tests/api/snapshot_test.rs
+expression: json_posts
+---
+[
+  {
+    "author_id": "[author_id]",
+    "body": "본문",
+    "created_at": "[timestamp]",
+    "id": "[id]",
+    "title": "첫 번째 글",
+    "updated_at": "[timestamp]"
+  },
+  {
+    "author_id": "[author_id]",
+    "body": "본문",
+    "created_at": "[timestamp]",
+    "id": "[id]",
+    "title": "두 번째 글",
+    "updated_at": "[timestamp]"
+  }
+]

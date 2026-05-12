@@ -267,17 +267,3 @@ pub async fn response_json(response: axum::response::Response) -> serde_json::Va
     let body = response.into_body().collect().await.unwrap().to_bytes();
     serde_json::from_slice(&body).unwrap()
 }
-
-pub async fn response_text(response: axum::response::Response) -> String {
-    let body = response.into_body().collect().await.unwrap().to_bytes();
-    String::from_utf8(body.into()).unwrap()
-}
-
-pub async fn get_test_pool() -> PgPool {
-    match std::env::var("DATABASE_URL") {
-        Ok(database_url) => PgPool::connect(&database_url).await.expect("DB 연결 실패"),
-        Err(_) => {
-            panic!("DATABASE_URL 환경 변수가 설정되지 않았습니다. testcontainers를 사용하세요.")
-        }
-    }
-}

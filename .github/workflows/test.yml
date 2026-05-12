@@ -30,3 +30,8 @@ jobs:
         run: cargo nextest run --profile ci
         env:
           SQLX_OFFLINE: "true"
+
+      - name: Check snapshot
+        run: cargo insta test --check
+        env:
+          SQLX_OFFLINE: "true"

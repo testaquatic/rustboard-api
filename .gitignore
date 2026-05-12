@@ -3,6 +3,8 @@
 .env
 # 이 프로젝트의 경우에는 배포를 하지 않는 것이 낫다
 Cargo.lock
+# 승인되지 않은 스냅삿
+*.snap.new
 
 # Added by cargo
 /target
