@@ -168,6 +168,8 @@ impl IntoResponse for AppError {
             ),
         };
 
+        crate::metrics::increment_error_counter("error_code");
+
         let body = ErrorBody {
             error: error_code,
             message,

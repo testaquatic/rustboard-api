@@ -78,6 +78,7 @@ async fn main() -> Result<(), anyhow::Error> {
             Duration::from_secs(30),
         ))
         .layer(governor_layer)
+        .layer(middleware::metric::TrackMetricsLayer)
         .layer(TraceLayer::new_for_http())
         .layer(axum::middleware::from_fn(
             middleware::request_id::add_request_id,

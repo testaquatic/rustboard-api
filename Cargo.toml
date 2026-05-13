@@ -16,14 +16,14 @@ axum = { version = "0.8", features = ["macros"]}
 chrono = { version = "0.4", features = ["serde"] }
 # .env파일에 환경 변수 주입
 dotenvy = "0.15"
-http-body-util = "0.1"
 # JWT
 jsonwebtoken = { version = "10", features = ["rust_crypto"] }
-opentelemetry = "0.31"
 # 오픈 텔레메트리, 버전이 일치하지 않으면 컴파일 오류
+# 지금 시점에는 tracing-opentelemetry = "0.32", 나머지는 "0.31"로 조정하면 잘 돌아간다.
+opentelemetry = "0.31"
 opentelemetry-otlp = { version = "0.31", features = ["grpc-tonic"] }
 opentelemetry-semantic-conventions = "0.31"
-opentelemetry_sdk = { version = "0.31", features = ["rt-tokio", "trace"] }
+opentelemetry_sdk = { version = "0.31", features = ["metrics", "rt-tokio", "trace"] }
 # PHC 문자열 
 password-hash = "0.5"
 # 솔트 생성
@@ -62,6 +62,7 @@ utoipa-swagger-ui = { version = "9", features = ["axum"] }
 uuid = { version = "1", features = ["v4"] }
 
 [dev-dependencies]
+http-body-util = "0.1"
 # 스냅샷 테스트
 insta = { version = "1", features = ["json", "yaml", "redactions"] }
 # 테스트용 도커 컨테이너

@@ -3,7 +3,7 @@ use std::{cmp::Ordering, collections::HashMap, sync::Arc};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use sqlx::PgPool;
-use tokio::sync::Mutex;
+use tokio::{sync::Mutex, time::Instant};
 use tracing::instrument;
 
 use crate::{
@@ -174,7 +174,9 @@ impl PostRepository for PostgresPostRepository {
         input: CreatePostInput,
         author_id: i64,
     ) -> Result<Post, RepositoryError> {
-        sqlx::query_as!(
+        let start = Instant::now();
+
+        let result = sqlx::query_as!(
             Post,
             r#"
             INSERT INTO posts (title, body, author_id)
@@ -187,12 +189,18 @@ impl PostRepository for PostgresPostRepository {
         )
         .fetch_one(&self.pool)
         .await
-        .map_err(From::from)
+        .map_err(From::from);
+
+        crate::metrics::record_db_query_duration("INSERT", "posts", start.elapsed().as_secs_f64());
+
+        result
     }
 
     #[instrument(skip(self))]
     async fn find_by_id(&self, id: i64) -> Result<Option<Post>, RepositoryError> {
-        sqlx::query_as!(
+        let start = Instant::now();
+
+        let result = sqlx::query_as!(
             Post,
             r#"
             SELECT id, title, body, author_id, created_at, updated_at
@@ -203,7 +211,11 @@ impl PostRepository for PostgresPostRepository {
         )
         .fetch_optional(&self.pool)
         .await
-        .map_err(From::from)
+        .map_err(From::from);
+
+        crate::metrics::record_db_query_duration("SELECT", "posts", start.elapsed().as_secs_f64());
+
+        result
     }
 
     async fn list(
@@ -211,6 +223,8 @@ impl PostRepository for PostgresPostRepository {
         cursor: Option<(DateTime<Utc>, i64)>,
         limit: i32,
     ) -> Result<Vec<Post>, RepositoryError> {
+        let start = Instant::now();
+
         let users = match cursor {
             Some((ts, id)) => {
                 sqlx::query_as!(
@@ -245,6 +259,8 @@ impl PostRepository for PostgresPostRepository {
             }
         };
 
+        crate::metrics::record_db_query_duration("SELECT", "posts", start.elapsed().as_secs_f64());
+
         Ok(users)
     }
 
@@ -253,7 +269,9 @@ impl PostRepository for PostgresPostRepository {
         id: i64,
         input: UpdatePostInput,
     ) -> Result<Option<Post>, RepositoryError> {
-        sqlx::query_as!(
+        let start = Instant::now();
+
+        let result = sqlx::query_as!(
             Post,
             r#"
             UPDATE posts
@@ -270,11 +288,17 @@ impl PostRepository for PostgresPostRepository {
         )
         .fetch_optional(&self.pool)
         .await
-        .map_err(From::from)
+        .map_err(From::from);
+
+        crate::metrics::record_db_query_duration("UPDATE", "posts", start.elapsed().as_secs_f64());
+
+        result
     }
 
     async fn delete(&self, id: i64) -> Result<bool, RepositoryError> {
-        sqlx::query!(
+        let start = Instant::now();
+
+        let result = sqlx::query!(
             r#"
             DELETE FROM posts
             WHERE id = $1
@@ -284,6 +308,10 @@ impl PostRepository for PostgresPostRepository {
         .execute(&self.pool)
         .await
         .map(|result| result.rows_affected() == 1)
-        .map_err(From::from)
+        .map_err(From::from);
+
+        crate::metrics::record_db_query_duration("DELETE", "posts", start.elapsed().as_secs_f64());
+
+        result
     }
 }
