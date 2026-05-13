@@ -22,6 +22,8 @@ pub enum AppError {
     Forbiddn,
     #[error("서버 내부 오류")]
     Internal(#[source] anyhow::Error),
+    // #[error("이미 존재하는 리소스입니다")]
+    // Conflict,
 }
 
 impl AppError {
@@ -113,6 +115,7 @@ impl IntoResponse for AppError {
                     "unhandled server error"
                 );
             }
+
             // 401, 403 보안 관련
             AppError::Unauthorized | AppError::Forbiddn => tracing::warn!(
                 error.type = "auth",
