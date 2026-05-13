@@ -4,6 +4,7 @@ use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use sqlx::PgPool;
 use tokio::sync::Mutex;
+use tracing::instrument;
 
 use crate::{
     domain::posts::{CreatePostInput, Post, UpdatePostInput},
@@ -167,6 +168,7 @@ impl PostgresPostRepository {
 
 #[async_trait]
 impl PostRepository for PostgresPostRepository {
+    #[instrument(skip(self, input), fields(table = "posts"))]
     async fn insert(
         &self,
         input: CreatePostInput,
@@ -188,6 +190,7 @@ impl PostRepository for PostgresPostRepository {
         .map_err(From::from)
     }
 
+    #[instrument(skip(self))]
     async fn find_by_id(&self, id: i64) -> Result<Option<Post>, RepositoryError> {
         sqlx::query_as!(
             Post,

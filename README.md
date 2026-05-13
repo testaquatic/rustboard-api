@@ -7,7 +7,7 @@
 
 ## POSTGRES
 
-- 도커 이미지 생성
+### 도커 이미지 생성
 
 ```bash
 docker run -d \
@@ -19,11 +19,23 @@ docker run -d \
   postgres:16
 ```
 
-- SQLX를 이용한 마이그레이션
+### SQLX를 이용한 마이그레이션
 
 ```bash
 cargo sqlx database create
 cargo sqlx migrate info
+```
+
+## Jaeger
+
+### 도커 이미지 생성
+
+```bash
+docker run -d \
+  --name rustboard-jaeger \
+  -p 16686:16686 \
+  -p 4317:4317 \
+  jaegertracing/all-in-one:latest
 ```
 
 # 엔드포인트

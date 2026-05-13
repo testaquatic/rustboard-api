@@ -13,26 +13,22 @@ use rustboard_api::{
     router::create_router,
     service::{comments::CommentService, posts::PostService, user::UserService},
     state::AppState,
+    telemetry,
 };
 use sqlx::postgres::PgPoolOptions;
 use tower_governor::{GovernorLayer, governor::GovernorConfigBuilder};
 use tower_http::{
     compression::CompressionLayer, cors::CorsLayer, timeout::TimeoutLayer, trace::TraceLayer,
 };
-use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> Result<(), anyhow::Error> {
     // env 파일이 있으면 로드한다.
     dotenvy::dotenv().ok();
 
-    tracing_subscriber::registry()
-        .with(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "rustboard_api=debug,tower_http=debug".into()),
-        )
-        .with(tracing_subscriber::fmt::layer())
-        .init();
+    // 로그 설정
+    // 우아한 종료를 위한 _gurad
+    let _guard = telemetry::init_telemetry()?;
 
     // 설정 읽기
     let config = Arc::new(Config::from_env()?);
@@ -99,7 +95,28 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         listener,
         app.into_make_service_with_connect_info::<SocketAddr>(),
     )
+    .with_graceful_shutdown(shutdown_signal())
     .await?;
 
     Ok(())
+}
+
+async fn shutdown_signal() {
+    let ctrl_c = tokio::signal::ctrl_c();
+
+    #[cfg(unix)]
+    let terminate = async {
+        tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+            .expect("SIGTERM 시그널 핸들러 설치 실패")
+            .recv()
+            .await;
+    };
+
+    #[cfg(not(unix))]
+    let terminate = std::future::pending::<()>();
+
+    tokio::select! {
+        _ = ctrl_c => {tracing::info!("Ctrl+C 수신, 종료 시작")},
+        _ = terminate => {tracing::info!("SIGTERM 수신, 종료 시작")},
+    }
 }

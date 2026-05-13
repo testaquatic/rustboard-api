@@ -1,4 +1,5 @@
 use chrono::{DateTime, Utc};
+use tracing::instrument;
 
 use crate::{
     domain::{
@@ -21,6 +22,8 @@ impl PostService {
         Self { repo }
     }
 
+    /// 글을 생성한다.
+    #[instrument(skip(self, input), fields(title = %input.title))]
     pub async fn create(
         &self,
         input: CreatePostInput,
@@ -52,16 +55,23 @@ impl PostService {
             .map_err(From::from)
     }
 
+    /// id를 기준으로 글을 불러온다.
+    #[instrument(skip(self), fields(message = tracing::field::Empty))]
     pub async fn get_by_id(&self, id: i64) -> Result<Post, ServiceError> {
-        self.repo
+        let post = self
+            .repo
             .find_by_id(id)
             .await?
             .ok_or(ServiceError::NotFound {
                 entity: "post".into(),
                 id,
-            })
+            });
+        tracing::info!(message = "게시글 조회 완료");
+
+        post
     }
 
+    #[instrument(skip(self))]
     pub async fn list_recent(
         &self,
         cursor: Option<(DateTime<Utc>, i64)>,
@@ -71,6 +81,7 @@ impl PostService {
     }
 
     /// 게시글을 수정한다.
+    #[instrument(skip(self, input))]
     pub async fn update(
         &self,
         id: i64,
@@ -121,6 +132,7 @@ impl PostService {
     }
 
     /// 게시글을 삭제한다.
+    #[instrument(skip(self))]
     pub async fn delete(
         &self,
         id: i64,
