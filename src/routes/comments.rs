@@ -5,9 +5,11 @@ use axum::{
 };
 
 use crate::{
-    auth::extractor::AuthUser, domain::comment::{CommentResponse, CreateCommentInput}, error::{AppError, ErrorBody}, state::AppState
+    auth::extractor::AuthUser,
+    domain::comment::{CommentResponse, CreateCommentInput},
+    error::{AppError, ErrorBody},
+    state::AppState,
 };
-
 
 /// 댓글을 생성하는 핸들러
 #[utoipa::path(
@@ -36,7 +38,7 @@ use crate::{
         status = StatusCode::INTERNAL_SERVER_ERROR,
         content_type = "application/json",
         body = ErrorBody,
-    ))    
+    ))
 )]
 pub async fn create_comment(
     State(state): State<AppState>,
@@ -44,8 +46,11 @@ pub async fn create_comment(
     auth_user: AuthUser,
     Json(input): Json<CreateCommentInput>,
 ) -> Result<(StatusCode, Json<CommentResponse>), AppError> {
-    let comment = state.comments_service.create(post_id, input, auth_user.user_id).await?;
-    
+    let comment = state
+        .comments_service
+        .create(post_id, input, auth_user.user_id)
+        .await?;
+
     Ok((StatusCode::CREATED, Json(comment.into())))
 }
 
@@ -73,10 +78,10 @@ pub async fn list_comments(
     State(state): State<AppState>,
     Path(post_id): Path<i64>,
 ) -> Result<Json<Vec<CommentResponse>>, AppError> {
-  let comments = state.comments_service.list_by_post(post_id).await?;
-  let body = comments.into_iter().map(CommentResponse::from).collect();
+    let comments = state.comments_service.list_by_post(post_id).await?;
+    let body = comments.into_iter().map(CommentResponse::from).collect();
 
-  Ok(Json(body))
+    Ok(Json(body))
 }
 
 #[derive(utoipa::OpenApi)]

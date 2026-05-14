@@ -2,10 +2,7 @@ use axum::{Json, extract::State, response::IntoResponse};
 use serde::Serialize;
 use utoipa::ToSchema;
 
-use crate::{const_val:: PKG_VERSION, state::AppState};
-
-
-
+use crate::{const_val::PKG_VERSION, state::AppState};
 
 /// 헬스체크 응답
 #[derive(Serialize, ToSchema)]
@@ -26,10 +23,10 @@ pub struct HealthResponse {
     summary = "헬스체크",  
     description = "헬스체크를 담당하는 엔드포인트",
     responses((
-        status = 200, 
-        description = "정상", 
+        status = 200,
+        description = "정상",
         content_type = "application/json",
-        body = HealthResponse, 
+        body = HealthResponse,
         example = json!(HealthResponse {
             status: "ok", 
             service: "rustboard-api".to_string() 
@@ -86,6 +83,4 @@ pub async fn version(State(state): State<AppState>) -> impl IntoResponse {
 pub struct VersionOpenApi;
 
 #[cfg(test)]
-mod tests {
-    
-}
+mod tests {}
