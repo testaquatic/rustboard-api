@@ -17,8 +17,12 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - uses: taiki-e/install-action@nextest
-      - uses: taiki-e/install-action@cargo-insta
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: |
+            nextest
+            cargo-insta
+            cargo-sqlx
       - run: cargo fmt --check
       - run: cargo clippy -- -D warnings
       - run: cargo sqlx prepare --check
