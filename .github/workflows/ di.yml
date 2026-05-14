@@ -22,7 +22,7 @@ jobs:
           tool: |
             nextest
             cargo-insta
-            cargo-sqlx
+            sqlx-cli
       - run: cargo fmt --check
       - run: cargo clippy -- -D warnings
       - run: cargo sqlx prepare --check
