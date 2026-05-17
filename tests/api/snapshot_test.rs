@@ -7,7 +7,7 @@ use crate::common;
 
 #[tokio::test]
 async fn snapshot_create_post_response() {
-    let ctx = common::TestContext::new();
+    let ctx = common::TestContext::new_in_memory();
 
     // 로그인
     let token = ctx.signup_and_login().await;
@@ -33,7 +33,7 @@ async fn snapshot_create_post_response() {
 
 #[tokio::test]
 async fn snapshot_unauthorized_error() {
-    let ctx = common::TestContext::new();
+    let ctx = common::TestContext::new_in_memory();
 
     let response = ctx
         .app()
@@ -52,7 +52,7 @@ async fn snapshot_unauthorized_error() {
 
 #[tokio::test]
 async fn snapshot_not_found_error() {
-    let ctx = common::TestContext::new();
+    let ctx = common::TestContext::new_in_memory();
 
     let response = ctx
         .app()
@@ -68,7 +68,7 @@ async fn snapshot_not_found_error() {
 
 #[tokio::test]
 async fn snapshot_list_posts() {
-    let ctx = common::TestContext::new();
+    let ctx = common::TestContext::new_in_memory();
     let token = ctx.signup_and_login().await;
 
     // 글 2개 작성

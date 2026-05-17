@@ -1,5 +1,6 @@
 pub mod auth;
-pub mod comments;
+pub mod comment;
 pub mod meta;
 pub mod posts;
 pub mod swagger;
+pub mod ws;

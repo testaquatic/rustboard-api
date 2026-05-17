@@ -1,3 +1,5 @@
+pub mod server;
+
 use std::sync::Arc;
 
 use axum::{
@@ -33,7 +35,7 @@ pub struct TestContext {
 }
 
 impl TestContext {
-    pub fn new() -> Self {
+    pub fn new_in_memory() -> Self {
         let post_repo = Arc::new(InMemoryPostRepository::new());
         let _comment_repo = Arc::new(InMemoryCommentRepository::new());
         let _user_repo = Arc::new(InMemoryUserRepository::new());
@@ -95,9 +97,15 @@ impl AppStateTestExt for AppState {
         comment_repo: DynCommentRepository,
         user_repo: DynUserRepository,
     ) -> Self {
+        let (notify_tx, _) = tokio::sync::broadcast::channel(100);
+
         let config = Arc::new(Config::test_default());
         let posts_service = Arc::new(PostService::new(post_repo.clone()));
-        let comments_service = Arc::new(CommentService::new(post_repo, comment_repo));
+        let comments_service = Arc::new(CommentService::new(
+            post_repo,
+            comment_repo,
+            notify_tx.clone(),
+        ));
         let users_service = Arc::new(UserService::new(user_repo));
 
         Self {
@@ -105,6 +113,7 @@ impl AppStateTestExt for AppState {
             posts_service,
             comments_service,
             users_service,
+            notify_tx,
         }
     }
 }
@@ -127,17 +136,18 @@ impl InMemoryPostRepositoryTestExt for InMemoryPostRepository {
 pub struct IntegrationTestContext {
     pub pool: PgPool,
     _container: ContainerAsync<Postgres>,
+    pub database_url: String,
 }
 
 impl IntegrationTestContext {
     pub async fn new() -> Self {
         // 컨테이너 시작
-        let container = Postgres::default()
+        let _container = Postgres::default()
             .start()
             .await
             .expect("PostgresSQL 컨테이너 시작 실패");
 
-        let host_port = container
+        let host_port = _container
             .get_host_port_ipv4(5432)
             .await
             .expect("포트 매핑 실패");
@@ -158,7 +168,8 @@ impl IntegrationTestContext {
 
         Self {
             pool,
-            _container: container,
+            _container,
+            database_url,
         }
     }
 
@@ -168,15 +179,22 @@ impl IntegrationTestContext {
         let user_repo = Arc::new(PostgresUserRepository::new(self.pool.clone()));
         let comment_repo = Arc::new(PostgresCommentRepository::new(self.pool.clone()));
 
+        let (notify_tx, _) = tokio::sync::broadcast::channel(100);
+
         let posts_service = Arc::new(PostService::new(post_repo.clone()));
         let users_service = Arc::new(UserService::new(user_repo.clone()));
-        let comments_service = Arc::new(CommentService::new(post_repo, comment_repo));
+        let comments_service = Arc::new(CommentService::new(
+            post_repo,
+            comment_repo,
+            notify_tx.clone(),
+        ));
 
         let state = AppState {
             config: config.clone(),
             posts_service,
             comments_service,
             users_service,
+            notify_tx,
         };
         let router = router::create_router(&config, state.clone());
 

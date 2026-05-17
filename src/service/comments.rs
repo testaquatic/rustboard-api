@@ -1,7 +1,12 @@
 use std::sync::Arc;
 
+use tokio::sync::broadcast;
+
 use crate::{
-    domain::comment::{Comment, CreateCommentInput},
+    domain::{
+        comment::{Comment, CreateCommentInput},
+        notification::{EventType, Notification},
+    },
     repository::{comment::CommentRepository, posts::PostRepository},
     service::error::ServiceError,
 };
@@ -9,16 +14,19 @@ use crate::{
 pub struct CommentService {
     posts_repo: Arc<dyn PostRepository + Send + Sync>,
     comments_repo: Arc<dyn CommentRepository + Send + Sync>,
+    notify_tx: broadcast::Sender<Notification>,
 }
 
 impl CommentService {
     pub fn new(
         posts_repo: Arc<dyn PostRepository + Send + Sync>,
         comments_repo: Arc<dyn CommentRepository + Send + Sync>,
+        notify_tx: broadcast::Sender<Notification>,
     ) -> Self {
         Self {
             posts_repo,
             comments_repo,
+            notify_tx,
         }
     }
 
@@ -27,6 +35,7 @@ impl CommentService {
         post_id: i64,
         input: CreateCommentInput,
         requester_id: i64,
+        actor_name: &str,
     ) -> Result<Comment, ServiceError> {
         let _ = requester_id;
         if input.body.trim().is_empty() {
@@ -41,10 +50,21 @@ impl CommentService {
             });
         };
 
-        self.comments_repo
-            .insert(post_id, input)
-            .await
-            .map_err(From::from)
+        let comment = self.comments_repo.insert(post_id, input).await?;
+
+        // 댓글 생성 알림 발행
+        let _ = self.notify_tx.send(Notification {
+            event_type: EventType::CommentAdded,
+            post_id,
+            comment_id: Some(comment.id),
+            actor: actor_name.to_string(),
+            message: format!(
+                "{}님이 {}번 게시글에 댓글을 달았습니다",
+                actor_name, post_id
+            ),
+        });
+
+        Ok(comment)
     }
 
     pub async fn list_by_post(&self, post_id: i64) -> Result<Vec<Comment>, ServiceError> {

@@ -5,3 +5,4 @@ mod integration_test;
 mod post_test;
 mod signup_test;
 mod snapshot_test;
+mod ws_test;

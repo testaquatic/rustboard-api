@@ -6,7 +6,7 @@ use crate::common;
 
 #[tokio::test]
 async fn health_check_returns_200_and_ok() {
-    let app = common::TestContext::new().app();
+    let app = common::TestContext::new_in_memory().app();
 
     let response = app.oneshot(common::get("/health")).await.unwrap();
 

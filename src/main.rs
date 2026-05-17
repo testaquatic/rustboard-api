@@ -1,26 +1,19 @@
 use std::{net::SocketAddr, sync::Arc, time::Duration};
 
-use axum::http::StatusCode;
 use rustboard_api::{
     config::Config,
-    middleware::{
-        self, rate_limit_error::rete_limit_error_response, rate_limit_key::ForwardedIpKeyExtractor,
-    },
     repository::{
         comment::PostgresCommentRepository, posts::PostgresPostRepository,
         user::PostgresUserRepository,
     },
-    router::create_router,
+    router::create_app_router_with_middleware,
     service::{comments::CommentService, posts::PostService, user::UserService},
     shutdown::shutdown_signal,
     state::AppState,
     telemetry,
 };
 use sqlx::postgres::PgPoolOptions;
-use tower_governor::{GovernorLayer, governor::GovernorConfigBuilder};
-use tower_http::{
-    compression::CompressionLayer, cors::CorsLayer, timeout::TimeoutLayer, trace::TraceLayer,
-};
+use tokio::sync::broadcast;
 
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {
@@ -47,9 +40,16 @@ async fn main() -> Result<(), anyhow::Error> {
     let posts_repo = Arc::new(PostgresPostRepository::new(pool.clone()));
     let comments_repo = Arc::new(PostgresCommentRepository::new(pool.clone()));
 
+    // braodcast 채널 생성
+    let (notify_tx, _) = broadcast::channel(100);
+
     // 서비스 초기화
     let posts_service = Arc::new(PostService::new(posts_repo.clone()));
-    let comments_service = Arc::new(CommentService::new(posts_repo, comments_repo));
+    let comments_service = Arc::new(CommentService::new(
+        posts_repo,
+        comments_repo,
+        notify_tx.clone(),
+    ));
     let user_repo = Arc::new(PostgresUserRepository::new(pool.clone()));
     let users_service = Arc::new(UserService::new(user_repo));
 
@@ -59,32 +59,11 @@ async fn main() -> Result<(), anyhow::Error> {
         posts_service,
         comments_service,
         users_service,
+        notify_tx,
     };
 
-    // 동시 접속수를 제한하는 레이어
-    let governor_conf = GovernorConfigBuilder::default()
-        .per_second(10)
-        .burst_size(30)
-        .key_extractor(ForwardedIpKeyExtractor)
-        .finish()
-        .unwrap();
-    let governor_layer = GovernorLayer::new(governor_conf).error_handler(rete_limit_error_response);
-
     // 라우터를 생성하고 상태와 미들웨어를 붙인다
-    let app = create_router(&config, state.clone())
-        .layer(CorsLayer::permissive())
-        .layer(CompressionLayer::new())
-        .layer(TimeoutLayer::with_status_code(
-            StatusCode::REQUEST_TIMEOUT,
-            Duration::from_secs(30),
-        ))
-        .layer(governor_layer)
-        .layer(middleware::metric::TrackMetricsLayer)
-        .layer(TraceLayer::new_for_http())
-        .layer(axum::middleware::from_fn(
-            middleware::request_id::add_request_id,
-        ));
-
+    let app = create_app_router_with_middleware(&config, state);
     // 서버 시작
     let listener = tokio::net::TcpListener::bind(config.bind_addr).await?;
     tracing::info!(

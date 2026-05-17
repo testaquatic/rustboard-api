@@ -1,9 +1,16 @@
+use std::time::Duration;
+
 use axum::{
     Json, Router,
+    http::StatusCode,
     response::IntoResponse,
     routing::{get, patch, post},
 };
 use serde_json::json;
+use tower_governor::{GovernorLayer, governor::GovernorConfigBuilder};
+use tower_http::{
+    compression::CompressionLayer, cors::CorsLayer, timeout::TimeoutLayer, trace::TraceLayer,
+};
 use utoipa::{
     OpenApi,
     openapi::{Info, OpenApiBuilder},
@@ -13,15 +20,45 @@ use utoipa_swagger_ui::SwaggerUi;
 use crate::{
     config::Config,
     const_val::PKG_VERSION,
-    middleware::{self, auth::AuthMiddleware},
-    routes::{
+    handler::{
         auth::{self, AuthOpenApi},
-        comments::{CommentsOpenApi, create_comment, list_comments},
+        comment::{CommentsOpenApi, create_comment, list_comments},
         meta::{HealthOpenApi, VersionOpenApi, health, version},
         posts::{PostsOpenApi, create_post, delete_post, get_post, list_posts, update_post},
+        ws,
+    },
+    middleware::{
+        self, auth::AuthMiddleware, rate_limit_error::rete_limit_error_response,
+        rate_limit_key::ForwardedIpKeyExtractor,
     },
     state::AppState,
 };
+
+/// 최종 라우터
+pub fn create_app_router_with_middleware(config: &Config, state: AppState) -> Router {
+    // 동시 접속수를 제한하는 레이어
+    let governor_conf = GovernorConfigBuilder::default()
+        .per_second(10)
+        .burst_size(30)
+        .key_extractor(ForwardedIpKeyExtractor)
+        .finish()
+        .unwrap();
+    let governor_layer = GovernorLayer::new(governor_conf).error_handler(rete_limit_error_response);
+
+    create_router(config, state)
+        .layer(CorsLayer::permissive())
+        .layer(CompressionLayer::new())
+        .layer(TimeoutLayer::with_status_code(
+            StatusCode::REQUEST_TIMEOUT,
+            Duration::from_secs(30),
+        ))
+        .layer(governor_layer)
+        .layer(middleware::metric::TrackMetricsLayer)
+        .layer(TraceLayer::new_for_http())
+        .layer(axum::middleware::from_fn(
+            middleware::request_id::add_request_id,
+        ))
+}
 
 /// axum 라우터
 pub fn create_router(config: &Config, state: AppState) -> Router {
@@ -29,9 +66,7 @@ pub fn create_router(config: &Config, state: AppState) -> Router {
         // 인증 없이 접근 가능한 라우터
         .merge(public_routes())
         // 인증이 필요한 라우터
-        .merge(protected_routes().route_layer(AuthMiddleware {
-            state: state.clone(),
-        }))
+        .merge(protected_routes(state.clone()))
         // /swagger
         .merge(openapi_router(config))
         // /admin
@@ -59,7 +94,7 @@ pub fn public_routes() -> Router<AppState> {
 }
 
 /// 인증이 필요한 라우터
-pub fn protected_routes() -> Router<AppState> {
+pub fn protected_routes(state: AppState) -> Router<AppState> {
     Router::new()
         // 글 작성
         .route("/posts", post(create_post))
@@ -67,6 +102,9 @@ pub fn protected_routes() -> Router<AppState> {
         .route("/posts/{id}", patch(update_post).delete(delete_post))
         // 댓글 작성
         .route("/posts/{post_id}/comments", post(create_comment))
+        // 댓글 알림
+        .route("/ws/notifications", get(ws::ws_notification))
+        .route_layer(AuthMiddleware { state })
 }
 
 pub fn admin_routes() -> Router<AppState> {

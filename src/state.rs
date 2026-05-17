@@ -1,7 +1,10 @@
 use std::sync::Arc;
 
+use tokio::sync::broadcast;
+
 use crate::{
     config::Config,
+    domain::notification::Notification,
     service::{comments::CommentService, posts::PostService, user::UserService},
 };
 
@@ -12,4 +15,5 @@ pub struct AppState {
     pub posts_service: Arc<PostService>,
     pub comments_service: Arc<CommentService>,
     pub users_service: Arc<UserService>,
+    pub notify_tx: broadcast::Sender<Notification>,
 }

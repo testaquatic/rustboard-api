@@ -10,6 +10,7 @@ pub struct AuthUser {
     pub user_id: i64,
     pub email: String,
     pub role: Role,
+    pub name: String,
 }
 
 impl AuthUser {
@@ -24,6 +25,7 @@ impl AuthUser {
             user_id,
             email: claims.email,
             role,
+            name: claims.sub,
         })
     }
 
