@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use tokio::sync::broadcast;
+use tokio::sync::{Semaphore, broadcast};
 
 use crate::{
     config::Config,
@@ -16,4 +16,5 @@ pub struct AppState {
     pub comments_service: Arc<CommentService>,
     pub users_service: Arc<UserService>,
     pub notify_tx: broadcast::Sender<Notification>,
+    pub ws_semaphore: Arc<Semaphore>,
 }

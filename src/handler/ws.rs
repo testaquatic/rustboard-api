@@ -1,4 +1,11 @@
-use std::{collections::HashSet, sync::Arc};
+use std::{
+    collections::HashSet,
+    sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    },
+    time::Duration,
+};
 
 use axum::{
     extract::{
@@ -8,19 +15,40 @@ use axum::{
     response::Response,
 };
 use futures_util::{SinkExt, StreamExt};
-use tokio::sync::RwLock;
+use tokio::{
+    sync::{OwnedSemaphorePermit, RwLock, broadcast},
+    time::interval,
+};
 
-use crate::{auth::extractor::AuthUser, domain::notification::ClientMessage, state::AppState};
+use crate::{
+    auth::extractor::AuthUser, domain::notification::ClientMessage, error::AppError,
+    state::AppState,
+};
 
 pub async fn ws_notification(
     State(state): State<AppState>,
     ws: WebSocketUpgrade,
     auth_user: AuthUser,
-) -> Response {
-    ws.on_upgrade(move |socket| handle_notification(socket, state, auth_user))
+) -> Result<Response, AppError> {
+    let permit = state
+        .ws_semaphore
+        .clone()
+        .try_acquire_owned()
+        .map_err(|_| AppError::TooMayConnections)?;
+
+    let response_body =
+        ws.on_upgrade(move |socket| handle_notification(socket, state, auth_user, permit));
+
+    Ok(response_body)
 }
 
-async fn handle_notification(socket: WebSocket, state: AppState, auth_user: AuthUser) {
+async fn handle_notification(
+    socket: WebSocket,
+    state: AppState,
+    auth_user: AuthUser,
+    _permit: OwnedSemaphorePermit,
+) {
+    // _permit는 이 함수가 끝나면 자동으로 드롭 => 다른 연결이 들어 올 수 있음
     let (mut sender, mut receiver) = socket.split();
     let mut notify_rx = state.notify_tx.subscribe();
 
@@ -30,6 +58,10 @@ async fn handle_notification(socket: WebSocket, state: AppState, auth_user: Auth
     // 수신 태스크용 클론
     let subs_for_recv = subscribed_posts.clone();
     let username = auth_user.name.clone();
+
+    let pong_received = Arc::new(AtomicBool::new(true));
+    let pong_for_recv = pong_received.clone();
+    let pong_for_send = pong_received.clone();
 
     // 수신 태스크
     let mut recv_task = tokio::spawn(async move {
@@ -50,6 +82,7 @@ async fn handle_notification(socket: WebSocket, state: AppState, auth_user: Auth
                         }
                     }
                 }
+                Message::Pong(_) => pong_for_recv.store(true, Ordering::Relaxed),
                 Message::Close(_) => break,
                 _ => {}
             }
@@ -58,16 +91,44 @@ async fn handle_notification(socket: WebSocket, state: AppState, auth_user: Auth
 
     // 송신 태스크
     let mut send_task = tokio::spawn(async move {
-        while let Ok(notification) = notify_rx.recv().await {
-            let is_subscribed = {
-                let subs = subscribed_posts.read().await;
-                subs.contains(&notification.post_id)
-            };
+        let mut heartbeat = interval(Duration::from_secs(30));
+        heartbeat.tick().await;
 
-            if is_subscribed {
-                let json = serde_json::to_string(&notification).unwrap_or_default();
-                if sender.send(json.into()).await.is_err() {
-                    break;
+        loop {
+            tokio::select! {
+                result = notify_rx.recv() => {
+                    match result {
+                        Ok(notification) => {
+                            let is_subscribed = {
+                                let subs = subscribed_posts.read().await;
+                                subs.contains(&notification.post_id)
+                            };
+
+                            if is_subscribed {
+                                let json = serde_json::to_string(&notification).unwrap_or_default();
+                                if sender.send(json.into()).await.is_err() {
+                                    break;
+                                }
+                            }
+                        }
+                        Err(broadcast::error::RecvError::Lagged(n)) => {
+                            tracing::warn!(missed = n, "느린 소비자: {n}개 알림 누적");
+                            // 계속 진행
+                        }
+                        Err(broadcast::error::RecvError::Closed) => break,
+                    }
+                }
+                // 30초마다 Ping
+                _ = heartbeat.tick() => {
+                    if !pong_for_send.load(Ordering::Relaxed) {
+                        tracing::warn!("Pong 미응답, 연결 종료");
+                        break;
+                    }
+                    pong_for_send.store(false, Ordering::Relaxed);
+
+                    if sender.send(Message::Ping(vec![].into())).await.is_err() {
+                        break;
+                    }
                 }
             }
         }

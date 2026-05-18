@@ -108,12 +108,15 @@ impl AppStateTestExt for AppState {
         ));
         let users_service = Arc::new(UserService::new(user_repo));
 
+        let ws_semaphore = Arc::new(tokio::sync::Semaphore::new(100));
+
         Self {
             config,
             posts_service,
             comments_service,
             users_service,
             notify_tx,
+            ws_semaphore,
         }
     }
 }
@@ -188,6 +191,7 @@ impl IntegrationTestContext {
             comment_repo,
             notify_tx.clone(),
         ));
+        let ws_semaphore = Arc::new(tokio::sync::Semaphore::new(100));
 
         let state = AppState {
             config: config.clone(),
@@ -195,6 +199,7 @@ impl IntegrationTestContext {
             comments_service,
             users_service,
             notify_tx,
+            ws_semaphore,
         };
         let router = router::create_router(&config, state.clone());
 

@@ -6,6 +6,7 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use serde::Serialize;
+use serde_json::json;
 use utoipa::ToSchema;
 
 use crate::service::error::ServiceError;
@@ -24,6 +25,8 @@ pub enum AppError {
     Internal(#[source] anyhow::Error),
     // #[error("이미 존재하는 리소스입니다")]
     // Conflict,
+    #[error("동시 연결 수 초과")]
+    TooMayConnections,
 }
 
 impl AppError {
@@ -136,6 +139,12 @@ impl IntoResponse for AppError {
               error.message = %self,
               "input validation failed"
             ),
+
+            AppError::TooMayConnections => tracing::warn!(
+                error.type = "too_many_connections",
+                error.message = %self,
+                "too many connections"
+            ),
         }
 
         // 응답
@@ -168,6 +177,11 @@ impl IntoResponse for AppError {
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "internal_error",
                 "서버 내부 오류가 발생했습니다".to_string(),
+            ),
+            AppError::TooMayConnections => (
+                StatusCode::SERVICE_UNAVAILABLE,
+                "too_many_connections",
+                "서버 연결 수 초과, 잠수 후 재시도해주세요.".to_string(),
             ),
         };
 

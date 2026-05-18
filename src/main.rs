@@ -53,6 +53,9 @@ async fn main() -> Result<(), anyhow::Error> {
     let user_repo = Arc::new(PostgresUserRepository::new(pool.clone()));
     let users_service = Arc::new(UserService::new(user_repo));
 
+    // 동시 접근수를 제한하는 세마포어
+    let ws_semaphore = Arc::new(tokio::sync::Semaphore::new(1000));
+
     // AppState 생성
     let state = AppState {
         config: config.clone(),
@@ -60,6 +63,7 @@ async fn main() -> Result<(), anyhow::Error> {
         comments_service,
         users_service,
         notify_tx,
+        ws_semaphore,
     };
 
     // 라우터를 생성하고 상태와 미들웨어를 붙인다
