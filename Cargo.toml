@@ -1,13 +1,17 @@
-[package]
-name = "rustboard-api"
-version = "0.1.1"
-edition = "2024"
+[workspace]
+members = [
+  "api",
+  "notifier",
+  "domain",
+  "proto"
+, "telemetry"]
+resolver = "2"
 
-[dependencies]
-# 오류 처리
-anyhow = "1"
+[workspace.dependencies]
 # argon2id
 argon2 = "0.5"
+# 오류 처리
+anyhow = "1"
 # #[async-tracit]
 async-trait = "0.1"
 # http 프레임워크
@@ -31,7 +35,6 @@ password-hash = "0.5"
 rand_core = "0.10"
 # 정규표현식
 regex = "1"
-reqwest = { version = "0.13", features = ["json"] }
 # 직렬화와 역직렬화
 serde = { version = "1", features = ["derive"] }
 # json
@@ -54,23 +57,25 @@ tracing = "0.1"
 tracing-opentelemetry = "0.32"
 # tracing를 터미널로 출력
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+# uuid
+uuid = { version = "1", features = ["v4"] }
 # swagger
 utoipa = { version = "5", features = ["chrono"] }
 # axum에서 swagger사용
 utoipa-axum = "0.2"
 # swagger Router 생성.
 utoipa-swagger-ui = { version = "9", features = ["axum"] }
-# uuid
-uuid = { version = "1", features = ["v4"] }
 
-[dev-dependencies]
+##### 테스트용 크레이트
 # 임의의 문자열을 생성한다.
 fake = "5"
 http-body-util = "0.1"
 # 스냅샷 테스트
 insta = { version = "1", features = ["json", "yaml", "redactions"] }
+reqwest = { version = "0.13", features = ["json"] }
 # 테스트용 도커 컨테이너
 testcontainers = "0.27"
 # 테스트용 도커 컨테이너 - Postgres
 testcontainers-modules = { version = "0.15", features = ["postgres"] }
 tokio-tungstenite = { version = "0.29", features = ["tokio-rustls"] }
+#####

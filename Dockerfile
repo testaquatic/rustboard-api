@@ -6,7 +6,7 @@ COPY . .
 RUN cargo chef prepare --recipe-path recipe.json
 
 # Builder
-FROM rust:slim AS chef-builder
+FROM rust:slim-trixie AS chef-builder
 WORKDIR /app
 RUN cargo install cargo-chef
 ## 필요한 의존성 설치
@@ -23,11 +23,10 @@ COPY . .
 COPY .sqlx/ .sqlx/
 ENV SQLX_OFFLINE=true
 
-
 RUN cargo build --release
 
 # 런타임
-FROM gcr.io/distroless/cc-debian13:nonroot AS runtime
+FROM debian:trixie-slim AS runtime
 WORKDIR /app
 
 COPY --from=chef-builder /app/target/release/rustboard-api /app/rustboard-api
