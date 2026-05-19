@@ -6,7 +6,6 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use serde::Serialize;
-use serde_json::json;
 use utoipa::ToSchema;
 
 use crate::service::error::ServiceError;

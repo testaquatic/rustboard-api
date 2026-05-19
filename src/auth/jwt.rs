@@ -13,6 +13,7 @@ pub struct Claims {
     /// 만료시간
     /// unix타임스탬프
     pub exp: i64,
+    pub username: String,
 }
 
 pub fn create_token(
@@ -28,6 +29,7 @@ pub fn create_token(
         email: user.email.clone(),
         role: "user".to_string(),
         exp,
+        username: user.display_name.clone(),
     };
 
     encode(

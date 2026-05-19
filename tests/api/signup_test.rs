@@ -5,7 +5,7 @@ use crate::common;
 
 #[tokio::test]
 async fn signup_duplicate_email_returns_422() {
-    let ctx = common::TestContext::new_in_memory();
+    let ctx = common::InMemoryTestContext::new_in_memory();
 
     // 회원가입
     let response = ctx

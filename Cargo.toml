@@ -64,6 +64,8 @@ utoipa-swagger-ui = { version = "9", features = ["axum"] }
 uuid = { version = "1", features = ["v4"] }
 
 [dev-dependencies]
+# 임의의 문자열을 생성한다.
+fake = "5"
 http-body-util = "0.1"
 # 스냅샷 테스트
 insta = { version = "1", features = ["json", "yaml", "redactions"] }

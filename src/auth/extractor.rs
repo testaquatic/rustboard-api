@@ -25,7 +25,7 @@ impl AuthUser {
             user_id,
             email: claims.email,
             role,
-            name: claims.sub,
+            name: claims.username,
         })
     }
 

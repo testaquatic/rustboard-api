@@ -26,7 +26,7 @@ use testcontainers::{ContainerAsync, runners::AsyncRunner};
 use testcontainers_modules::postgres::Postgres;
 use tower::ServiceExt;
 
-pub struct TestContext {
+pub struct InMemoryTestContext {
     pub post_repo: Arc<InMemoryPostRepository>,
     _comment_repo: Arc<InMemoryCommentRepository>,
     _user_repo: Arc<InMemoryUserRepository>,
@@ -34,7 +34,7 @@ pub struct TestContext {
     state: AppState,
 }
 
-impl TestContext {
+impl InMemoryTestContext {
     pub fn new_in_memory() -> Self {
         let post_repo = Arc::new(InMemoryPostRepository::new());
         let _comment_repo = Arc::new(InMemoryCommentRepository::new());
@@ -63,7 +63,6 @@ impl TestContext {
 }
 
 /// 테스트용 함수는 되도록 노출하지 않는 것이 좋다고 해서 별도로 정리했다.
-
 pub trait ConfigTestExt {
     fn test_default() -> Self;
 }

@@ -7,7 +7,7 @@ use crate::common::{self, InMemoryPostRepositoryTestExt};
 
 #[tokio::test]
 async fn create_post_without_token_returns_401() {
-    let ctx = common::TestContext::new_in_memory();
+    let ctx = common::InMemoryTestContext::new_in_memory();
     let request = common::post_json(
         "/posts",
         serde_json::json!({"title": "테스트 글", "content": "본문입니다"}),
@@ -19,7 +19,7 @@ async fn create_post_without_token_returns_401() {
 
 #[tokio::test]
 async fn get_nonexistent_post_returns_404() {
-    let ctx = common::TestContext::new_in_memory();
+    let ctx = common::InMemoryTestContext::new_in_memory();
     let response = ctx
         .app()
         .oneshot(common::get("/posts/999999"))
@@ -31,7 +31,7 @@ async fn get_nonexistent_post_returns_404() {
 
 #[tokio::test]
 async fn signup_then_login_then_create_post() {
-    let ctx = common::TestContext::new_in_memory();
+    let ctx = common::InMemoryTestContext::new_in_memory();
 
     // 로그인
     let token = ctx.signup_and_login().await;
@@ -53,7 +53,7 @@ async fn signup_then_login_then_create_post() {
 
 #[tokio::test]
 async fn list_returns_empty_then_no_posts() {
-    let ctx = common::TestContext::new_in_memory();
+    let ctx = common::InMemoryTestContext::new_in_memory();
     let response = ctx.app().oneshot(common::get("/posts")).await.unwrap();
     assert_eq!(response.status(), StatusCode::OK);
 
@@ -63,7 +63,7 @@ async fn list_returns_empty_then_no_posts() {
 
 #[tokio::test]
 async fn list_returns_seeded_posts() {
-    let ctx = common::TestContext::new_in_memory();
+    let ctx = common::InMemoryTestContext::new_in_memory();
 
     // 사전데이터 주입
     let posts = vec![
@@ -96,7 +96,7 @@ async fn list_returns_seeded_posts() {
 
 #[tokio::test]
 async fn owner_can_delete_own_post() {
-    let ctx = common::TestContext::new_in_memory();
+    let ctx = common::InMemoryTestContext::new_in_memory();
 
     // 계정 생성과 로그인
     let token = ctx.signup_and_login().await;
