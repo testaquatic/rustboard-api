@@ -43,7 +43,7 @@ impl Config {
         // GRPC_SERVER_ADDR
         // 기본값은 "127.0.0.1:50052"
         let grpc_server_addr =
-            std::env::var("GRPC_SERVER_ADDR").unwrap_or_else(|_| "127.0.0.1:50052".to_string());
+            std::env::var("GRPC_SERVER_ADDR").unwrap_or_else(|_| "127.0.0.1:50051".to_string());
         let grpc_server_addr = grpc_server_addr
             .parse::<SocketAddr>()
             .map_err(|e| ConfigError::Invalid("GRPC_SERVER_ADDR", e.to_string()))?;

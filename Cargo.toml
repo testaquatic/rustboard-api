@@ -1,3 +1,7 @@
+[profile.profiling]
+inherits = "release"
+debug = true
+
 [workspace]
 members = [
   "api",
