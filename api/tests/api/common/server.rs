@@ -1,66 +1,197 @@
-use std::{net::SocketAddr, sync::LazyLock};
+use std::{
+    net::SocketAddr,
+    sync::{Arc, LazyLock},
+};
 
+use axum::Router;
 use fake::{
     Fake,
     faker::lorem::en::{Paragraph, Sentence},
 };
 use reqwest::header;
-use rustboard_api::{config::Config, router::create_app_router_with_middleware, state::AppState};
+use rustboard_api::{
+    client::notification::NotificationClient,
+    config::Config,
+    repository::{
+        comment::{InMemoryCommentRepository, PostgresCommentRepository},
+        posts::{InMemoryPostRepository, PostgresPostRepository},
+        user::{InMemoryUserRepository, PostgresUserRepository},
+    },
+    router::{create_app_router, create_app_router_with_middleware},
+    service::{comments::CommentService, posts::PostService, user::UserService},
+    state::AppState,
+};
+use rustboard_domain::posts::Post;
+use rustboard_proto::notification::notification_service_server::NotificationServiceServer;
 use rustboard_telemetry::telemetry::{OtelGuard, init_telemetry};
 use serde_json::json;
+use sqlx::PgPool;
+use testcontainers::{ContainerAsync, runners::AsyncRunner};
+use testcontainers_modules::postgres::Postgres;
 use tokio::{net::TcpListener, task::JoinHandle};
 use tokio_tungstenite::tungstenite::http::Request;
-
-use crate::common::{ConfigTestExt, IntegrationTestContext};
+use tracing_subscriber::EnvFilter;
 
 /// 실제로 작동하는 서버이다.
 pub struct TestServer {
-    pub addr: String,
+    pub state: AppState,
+    pub app_router: Router,
+    server_handle: JoinHandle<()>,
+    grpc_server_handle: JoinHandle<()>,
+    postgres_container: Option<ContainerAsync<Postgres>>,
     reqwest_client: reqwest::Client,
-    _state: AppState,
-    _postgres_context: IntegrationTestContext,
-    _handle: JoinHandle<()>,
 }
 
 impl TestServer {
-    /// 테스트 서버 인스턴스를 생성한다.
-    pub async fn new() -> TestServer {
+    pub async fn new_in_memory() -> TestServer {
         // 한번만 실행되도록 LazyLock을 사용한다.
-        static _INIT_ONCE: LazyLock<OtelGuard> = LazyLock::new(|| init_telemetry().unwrap());
+        static _INIT_ONCE: LazyLock<OtelGuard> = LazyLock::new(|| {
+            let env_filter = EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| "rustboard_api=debug,tower_http=debug,sqlx=info".into());
+            init_telemetry(env_filter).unwrap()
+        });
 
-        let listener = TcpListener::bind("127.0.0.1:0")
+        let posts_repo = Arc::new(InMemoryPostRepository::new());
+        let comments_repo = Arc::new(InMemoryCommentRepository::new(posts_repo.clone()));
+        let (gprc_server, notification_client, grpc_socket_addr) = spawn_grpc_server().await;
+
+        let posts_service = Arc::new(PostService::new(posts_repo.clone()));
+        let comments_service = Arc::new(CommentService::new(
+            posts_repo,
+            comments_repo,
+            notification_client.clone(),
+        ));
+
+        let users_service = Arc::new(UserService::new(Arc::new(InMemoryUserRepository::new())));
+        let ws_semaphore = Arc::new(tokio::sync::Semaphore::new(100));
+
+        let api_server_listener = TcpListener::bind("127.0.0.1:0")
             .await
             .expect("Failed to bind to random port");
 
-        let postgres_context = IntegrationTestContext::new().await;
-        let (_, state) = postgres_context.app_with_db();
-        let mut config = Config::test_default();
-        config.bind_addr = listener.local_addr().expect("Failed to get local address");
-        config.database_url = postgres_context.database_url.clone();
+        let config = Config {
+            bind_addr: api_server_listener
+                .local_addr()
+                .expect("Failed to get local address"),
+            grpc_addr: grpc_socket_addr,
+            service_name: format!("rustboard-api-test-{}", uuid::Uuid::new_v4()),
+            database_url: "".to_string(),
+            jwt_secret: "test-secret-key-for-testing-only".into(),
+            jwt_expiration_minutes: 15,
+        };
 
-        let addr = config.bind_addr.to_string();
+        let app_state = AppState {
+            posts_service,
+            comments_service,
+            users_service,
+            ws_semaphore,
+            notification_client,
+            config: Arc::new(config.clone()),
+        };
 
-        let router = create_app_router_with_middleware(&config, state.clone());
+        let app_router = create_app_router(&config, app_state.clone());
+        let app_router_clone = app_router.clone();
 
-        let server = axum::serve(
-            listener,
-            router.into_make_service_with_connect_info::<SocketAddr>(),
+        let server_handle = tokio::spawn(async move {
+            axum::serve(api_server_listener, app_router_clone)
+                .await
+                .expect("test api server error")
+        });
+
+        let reqwest_client = reqwest::Client::new();
+        TestServer {
+            state: app_state,
+            app_router,
+            server_handle,
+            grpc_server_handle: gprc_server,
+            postgres_container: None,
+            reqwest_client,
+        }
+    }
+
+    /// 테스트 서버 인스턴스를 생성한다.
+    pub async fn new() -> TestServer {
+        // 한번만 실행되도록 LazyLock을 사용한다.
+        static _INIT_ONCE: LazyLock<OtelGuard> = LazyLock::new(|| {
+            let env_filter = EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| "rustboard_api=debug,tower_http=debug,sqlx=info".into());
+            init_telemetry(env_filter).unwrap()
+        });
+
+        let postgres_contaienr = Postgres::default()
+            .start()
+            .await
+            .expect("Failed to start postgres container");
+
+        let host_port = postgres_contaienr
+            .get_host_port_ipv4(5432)
+            .await
+            .expect("포트 매핑 실패");
+
+        let database_url = format!(
+            "postgres://postgres:postgres@127.0.0.1:{}/postgres",
+            host_port
         );
 
-        let handle = tokio::spawn(async move {
-            if let Err(e) = server.await {
-                tracing::error!(error = %e, "서버 오류");
-            }
+        let pool = PgPool::connect(&database_url).await.expect("DB 연결 실패");
+        let posts_repo = Arc::new(PostgresPostRepository::new(pool.clone()));
+        let comments_repo = Arc::new(PostgresCommentRepository::new(pool.clone()));
+        let (gprc_server, notification_client, grpc_socket_addr) = spawn_grpc_server().await;
+
+        let posts_service = Arc::new(PostService::new(posts_repo.clone()));
+        let comments_service = Arc::new(CommentService::new(
+            posts_repo,
+            comments_repo,
+            notification_client.clone(),
+        ));
+
+        let users_service = Arc::new(UserService::new(Arc::new(PostgresUserRepository::new(
+            pool.clone(),
+        ))));
+        let ws_semaphore = Arc::new(tokio::sync::Semaphore::new(100));
+
+        let api_server_listener = TcpListener::bind("127.0.0.1:0")
+            .await
+            .expect("Failed to bind to random port");
+
+        let config = Config {
+            bind_addr: api_server_listener
+                .local_addr()
+                .expect("Failed to get local address"),
+            grpc_addr: grpc_socket_addr,
+            service_name: format!("rustboard-api-test-{}", uuid::Uuid::new_v4()),
+            database_url,
+            jwt_secret: "test-secret-key-for-testing-only".into(),
+            jwt_expiration_minutes: 15,
+        };
+
+        let app_state = AppState {
+            posts_service,
+            comments_service,
+            users_service,
+            ws_semaphore,
+            notification_client,
+            config: Arc::new(config.clone()),
+        };
+
+        let app_router = create_app_router_with_middleware(&config, app_state.clone());
+        let app_router_clone = app_router.clone();
+
+        let server_handle = tokio::spawn(async move {
+            axum::serve(api_server_listener, app_router_clone)
+                .await
+                .expect("test api server error")
         });
 
         let reqwest_client = reqwest::Client::new();
 
         TestServer {
-            addr,
+            state: app_state,
+            app_router,
+            server_handle,
+            grpc_server_handle: gprc_server,
+            postgres_container: Some(postgres_contaienr),
             reqwest_client,
-            _state: state,
-            _postgres_context: postgres_context,
-            _handle: handle,
         }
     }
 
@@ -82,7 +213,7 @@ impl TestServer {
 
         let response = self
             .reqwest_client
-            .post(format!("http://{}/signup", self.addr))
+            .post(format!("http://{}/signup", self.state.config.bind_addr))
             .header(header::CONTENT_TYPE, "application/json")
             .json(&signup_body)
             .send()
@@ -95,7 +226,7 @@ impl TestServer {
         let login_body = json!({"email": email, "password": password});
         let token_response = self
             .reqwest_client
-            .post(format!("http://{}/login", self.addr))
+            .post(format!("http://{}/login", self.state.config.bind_addr))
             .header(header::CONTENT_TYPE, "application/json")
             .json(&login_body)
             .send()
@@ -110,6 +241,24 @@ impl TestServer {
 
         token
     }
+    /// 글을 작성한다.
+    pub async fn create_post(&self, token: &str, post: &Post) {
+        let post_body = json!({
+            "title": post.title,
+            "content": post.body,
+        });
+
+        let response = self
+            .reqwest_client
+            .post(format!("http://{}/posts", self.state.config.bind_addr))
+            .bearer_auth(token)
+            .header(header::CONTENT_TYPE, "application/json")
+            .json(&post_body)
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(response.status(), reqwest::StatusCode::CREATED);
+    }
 
     /// 정해준 수의 임의의 글을 생성한다
     pub async fn create_test_post(&self, token: &str, count: usize) {
@@ -123,7 +272,7 @@ impl TestServer {
 
             let response = self
                 .reqwest_client
-                .post(format!("http://{}/posts", self.addr))
+                .post(format!("http://{}/posts", self.state.config.bind_addr))
                 .bearer_auth(token)
                 .header(header::CONTENT_TYPE, "application/json")
                 .json(&post_body)
@@ -141,7 +290,10 @@ impl TestServer {
         });
 
         self.reqwest_client
-            .post(format!("http://{}/posts/{}/comments", self.addr, post_id))
+            .post(format!(
+                "http://{}/posts/{}/comments",
+                self.state.config.bind_addr, post_id
+            ))
             .bearer_auth(token)
             .header(header::CONTENT_TYPE, "application/json")
             .json(&comment_body)
@@ -165,4 +317,27 @@ pub fn build_ws_reqeust(addr: &str, token: &str) -> Request<()> {
         )
         .body(())
         .unwrap()
+}
+
+/// gRPC 서버를 테스트용으로 생성하고 백그라운드에서 실행
+pub async fn spawn_grpc_server() -> (tokio::task::JoinHandle<()>, NotificationClient, SocketAddr) {
+    // 테스트용 gRPC 서버를 백그라운드에서 실행
+    let notifier = rustboard_notifier::service::NotifierService::new();
+
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let bound_addr = listener.local_addr().unwrap();
+
+    let grpc_server = tokio::spawn(async move {
+        tonic::transport::Server::builder()
+            .add_service(NotificationServiceServer::new(notifier))
+            .serve(bound_addr)
+            .await
+            .unwrap()
+    });
+
+    let client = NotificationClient::connect(&format!("http://{}", bound_addr))
+        .await
+        .unwrap();
+
+    (grpc_server, client, bound_addr)
 }

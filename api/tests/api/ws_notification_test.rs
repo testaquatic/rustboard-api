@@ -18,7 +18,10 @@ async fn test_comment_notification() {
         .await;
 
     // ws 연결
-    let request = build_ws_reqeust(&test_server.addr, &test_user_token);
+    let request = build_ws_reqeust(
+        &test_server.state.config.grpc_addr.to_string(),
+        &test_user_token,
+    );
 
     let (mut ws, _) = connect_async(request).await.unwrap();
 
@@ -67,7 +70,7 @@ async fn test_unsubscribed_post_filtered() {
     let token = test_server
         .create_test_token("test@example.com", "password123", "tester")
         .await;
-    let request = build_ws_reqeust(&test_server.addr, &token);
+    let request = build_ws_reqeust(&test_server.state.config.grpc_addr.to_string(), &token);
 
     let (mut ws, _) = connect_async(request).await.unwrap();
     // 글을 10개 작성함
@@ -102,7 +105,11 @@ async fn test_unsubscribed_post_filtered() {
 #[tokio::test]
 async fn test_ws_without_auth_rejection() {
     let test_server = TestServer::new().await;
-    let result = connect_async(format!("ws://{}/ws/notifications", test_server.addr)).await;
+    let result = connect_async(format!(
+        "ws://{}/ws/notifications",
+        test_server.state.config.grpc_addr
+    ))
+    .await;
 
     assert!(result.is_err(), "인증 없이 연결 성공함");
 }

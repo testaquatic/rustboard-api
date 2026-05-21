@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            SELECT id, post_id, body, created_at, updated_at\n            FROM comments\n            WHERE id = $1\n            ",
+  "query": "\n            SELECT \n                id, post_id, (SELECT author_id FROM posts WHERE id = $1) AS \"post_author_id!\", body, created_at, updated_at\n            FROM comments\n            WHERE post_id = $1\n            ORDER BY created_at DESC, id DESC\n            ",
   "describe": {
     "columns": [
       {
@@ -15,16 +15,21 @@
       },
       {
         "ordinal": 2,
+        "name": "post_author_id!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 3,
         "name": "body",
         "type_info": "Text"
       },
       {
-        "ordinal": 3,
+        "ordinal": 4,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 4,
+        "ordinal": 5,
         "name": "updated_at",
         "type_info": "Timestamptz"
       }
@@ -37,10 +42,11 @@
     "nullable": [
       false,
       false,
+      null,
       false,
       false,
       false
     ]
   },
-  "hash": "443d1efd20b3d8859c3cac3672a535437256db8962622c3415578ccbe433b08d"
+  "hash": "5d8894a841d9599bb478c903fefe31126e0f720c7dcd4d87cb221c0487238c41"
 }

@@ -35,6 +35,7 @@ pub trait PostRepository {
     -> Result<Post, RepositoryError>;
     /// id를 기준으로 글을 불러온다.
     async fn find_by_id(&self, id: i64) -> Result<Option<Post>, RepositoryError>;
+
     /// 모든 글을 불러온다.
     async fn list(
         &self,

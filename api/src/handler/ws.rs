@@ -1,24 +1,6 @@
-use std::{
-    collections::HashSet,
-    sync::{
-        Arc,
-        atomic::{AtomicBool, Ordering},
-    },
-    time::Duration,
-};
-
 use axum::{
-    extract::{
-        State, WebSocketUpgrade,
-        ws::{Message, WebSocket},
-    },
+    extract::{State, WebSocketUpgrade},
     response::Response,
-};
-use futures_util::{SinkExt, StreamExt};
-use rustboard_domain::notification::ClientMessage;
-use tokio::{
-    sync::{OwnedSemaphorePermit, RwLock, broadcast},
-    time::interval,
 };
 
 use crate::{auth::extractor::AuthUser, error::AppError, state::AppState};
@@ -34,12 +16,11 @@ pub async fn ws_notification(
         .try_acquire_owned()
         .map_err(|_| AppError::TooMayConnections)?;
 
-    let response_body =
-        ws.on_upgrade(move |socket| handle_notification(socket, state, auth_user, permit));
+    let response_body = ws.on_upgrade(move |socket| async move {});
 
     Ok(response_body)
 }
-
+/*
 async fn handle_notification(
     socket: WebSocket,
     state: AppState,
@@ -140,3 +121,4 @@ async fn handle_notification(
 
     tracing::info!(user = %auth_user.name, "WebSocket 연결 종료");
 }
+*/

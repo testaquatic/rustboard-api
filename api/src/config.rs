@@ -4,6 +4,7 @@ use std::net::SocketAddr;
 #[derive(Debug, Clone)]
 pub struct Config {
     pub bind_addr: SocketAddr,
+    pub grpc_addr: SocketAddr,
     pub service_name: String,
     pub database_url: String,
     pub jwt_secret: String,
@@ -26,6 +27,11 @@ impl Config {
         // 기본값은 "0.0.0.0:3000"
         let bind_addr = std::env::var("BIND_ADDR").unwrap_or_else(|_| "0.0.0.0:3000".to_string());
         let bind_addr = bind_addr
+            .parse::<SocketAddr>()
+            .map_err(|e| ConfigError::Invalid("BIND_ADDR", e.to_string()))?;
+
+        let grpc_addr = std::env::var("BIND_ADDR").unwrap_or_else(|_| "0.0.0.0:50051".to_string());
+        let grpc_addr = grpc_addr
             .parse::<SocketAddr>()
             .map_err(|e| ConfigError::Invalid("BIND_ADDR", e.to_string()))?;
 
@@ -53,6 +59,7 @@ impl Config {
 
         Ok(Self {
             bind_addr,
+            grpc_addr,
             service_name,
             database_url,
             jwt_secret,

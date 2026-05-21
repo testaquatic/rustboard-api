@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            INSERT INTO comments (post_id, body)\n            VALUES ($1, $2)\n            RETURNING id, post_id, body, created_at, updated_at\n            ",
+  "query": "\n            INSERT INTO comments (post_id, body)\n            VALUES ($1, $2)\n            RETURNING \n                id, \n                post_id,\n                body, \n                created_at, \n                updated_at\n            ",
   "describe": {
     "columns": [
       {
@@ -43,5 +43,5 @@
       false
     ]
   },
-  "hash": "eeb760610b7087410cfed9df5e5b4465c8dd9a00816bb918823d7bba1a1ee17d"
+  "hash": "33b26831cb05907c0a91d2e6d7119fdffccbda1289f10d7115c19608f9686f93"
 }

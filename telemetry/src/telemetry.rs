@@ -25,17 +25,9 @@ impl Drop for OtelGuard {
     }
 }
 
-pub fn init_telemetry() -> Result<OtelGuard, anyhow::Error> {
+pub fn init_telemetry(env_filter: EnvFilter) -> Result<OtelGuard, anyhow::Error> {
     // 개발/프로덕션 확인
     let is_dev = cfg!(debug_assertions);
-
-    let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| {
-        if is_dev {
-            "rustboard_api=debug,tower_http=debug,sqlx=info".into()
-        } else {
-            "rustboard_api=info,tower_http=info,sqlx=warn".into()
-        }
-    });
 
     let dev_fmt = if is_dev {
         Some(tracing_subscriber::fmt::layer().pretty().with_target(true))

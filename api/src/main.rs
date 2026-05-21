@@ -1,6 +1,7 @@
 use std::{net::SocketAddr, sync::Arc, time::Duration};
 
 use rustboard_api::{
+    client::notification::NotificationClient,
     config::Config,
     repository::{
         comment::PostgresCommentRepository, posts::PostgresPostRepository,
@@ -13,7 +14,7 @@ use rustboard_api::{
 };
 use rustboard_telemetry::telemetry;
 use sqlx::postgres::PgPoolOptions;
-use tokio::sync::broadcast;
+use tracing_subscriber::EnvFilter;
 
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {
@@ -21,8 +22,15 @@ async fn main() -> Result<(), anyhow::Error> {
     dotenvy::dotenv().ok();
 
     // 로그 설정
+    let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| {
+        if cfg!(debug_assertions) {
+            "rustboard_api=debug,tower_http=debug,sqlx=info".into()
+        } else {
+            "rustboard_api=info,tower_http=info,sqlx=warn".into()
+        }
+    });
     // 우아한 종료를 위한 _gurad
-    let _guard = telemetry::init_telemetry()?;
+    let _guard = telemetry::init_telemetry(env_filter)?;
 
     // 설정 읽기
     let config = Arc::new(Config::from_env()?);
@@ -36,19 +44,21 @@ async fn main() -> Result<(), anyhow::Error> {
     // 앱을 시작하면 DB마이그레이션을 자동 적용한다.
     sqlx::migrate!("../migrations").run(&pool).await?;
 
+    // gRPC 클라이언트 생성
+    let notification_client = NotificationClient::connect("http://127.0.0.1:50051")
+        .await
+        .expect("gRPC 알림 서버 연결 실패");
+
     // 리포지토리 초기화
     let posts_repo = Arc::new(PostgresPostRepository::new(pool.clone()));
     let comments_repo = Arc::new(PostgresCommentRepository::new(pool.clone()));
-
-    // braodcast 채널 생성
-    let (notify_tx, _) = broadcast::channel(100);
 
     // 서비스 초기화
     let posts_service = Arc::new(PostService::new(posts_repo.clone()));
     let comments_service = Arc::new(CommentService::new(
         posts_repo,
-        comments_repo,
-        notify_tx.clone(),
+        comments_repo.clone(),
+        notification_client.clone(),
     ));
     let user_repo = Arc::new(PostgresUserRepository::new(pool.clone()));
     let users_service = Arc::new(UserService::new(user_repo));
@@ -62,8 +72,8 @@ async fn main() -> Result<(), anyhow::Error> {
         posts_service,
         comments_service,
         users_service,
-        notify_tx,
         ws_semaphore,
+        notification_client,
     };
 
     // 라우터를 생성하고 상태와 미들웨어를 붙인다

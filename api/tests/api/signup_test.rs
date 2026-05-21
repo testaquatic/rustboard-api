@@ -1,16 +1,17 @@
 use serde_json::json;
 use tower::ServiceExt;
 
-use crate::common;
+use crate::common::{self, server::TestServer};
 
 #[tokio::test]
 async fn signup_duplicate_email_returns_422() {
-    let ctx = common::InMemoryTestContext::new_in_memory();
+    let test_server = TestServer::new_in_memory().await;
 
     // 회원가입
-    let response = ctx
-        .app()
-        .oneshot(common::post_json(
+    let response = test_server
+        .app_router
+        .clone()
+        .oneshot(common::helper::post_json(
             "/signup",
             json!({
                 "email": "test@example.com",
@@ -23,9 +24,10 @@ async fn signup_duplicate_email_returns_422() {
     assert_eq!(response.status(), axum::http::StatusCode::CREATED);
 
     // 중복 회원가입
-    let response = ctx
-        .app()
-        .oneshot(common::post_json(
+    let response = test_server
+        .app_router
+        .clone()
+        .oneshot(common::helper::post_json(
             "/signup",
             // 이메일 주소만 같다.
             json!({

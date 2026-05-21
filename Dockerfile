@@ -10,7 +10,7 @@ FROM rust:slim-trixie AS chef-builder
 WORKDIR /app
 RUN cargo install cargo-chef
 ## 필요한 의존성 설치
-RUN apt update && apt install curl -y
+RUN apt update && apt install curl protobuf-compiler -y
 
 ## 의존성 캐시 레이어
 COPY --from=chef-planner /app/recipe.json recipe.json

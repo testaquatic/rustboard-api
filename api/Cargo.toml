@@ -4,8 +4,12 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+# 워크스페이스 크레이트
 rustboard-domain = {path = "../domain"}
+rustboard-notifier = {path = "../notifier"}
+rustboard-proto = {path = "../proto"}
 rustboard-telemetry = {path = "../telemetry"}
+# 외부 크레이트
 anyhow = {workspace = true}
 argon2 = {workspace = true}
 async-trait = {workspace = true}
@@ -22,11 +26,13 @@ serde_json = {workspace = true}
 sqlx = {workspace = true}
 thiserror = {workspace = true}
 tokio = {workspace = true}
+tonic = {workspace = true}
 tower = {workspace = true}
 tower-http = {workspace = true}
 tower_governor = {workspace = true}
 tracing = {workspace = true}
 tracing-opentelemetry = {workspace = true}
+tracing-subscriber = {workspace = true}
 utoipa = {workspace = true}
 utoipa-swagger-ui = {workspace = true}
 uuid = {workspace = true}

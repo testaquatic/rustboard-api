@@ -45,7 +45,7 @@ pub fn create_app_router_with_middleware(config: &Config, state: AppState) -> Ro
         .unwrap();
     let governor_layer = GovernorLayer::new(governor_conf).error_handler(rete_limit_error_response);
 
-    create_router(config, state)
+    create_app_router(config, state)
         .layer(CorsLayer::permissive())
         .layer(CompressionLayer::new())
         .layer(TimeoutLayer::with_status_code(
@@ -61,7 +61,7 @@ pub fn create_app_router_with_middleware(config: &Config, state: AppState) -> Ro
 }
 
 /// axum 라우터
-pub fn create_router(config: &Config, state: AppState) -> Router {
+pub fn create_app_router(config: &Config, state: AppState) -> Router {
     Router::new()
         // 인증 없이 접근 가능한 라우터
         .merge(public_routes())

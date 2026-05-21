@@ -2,18 +2,18 @@ use axum::http::StatusCode;
 use serde_json::json;
 use tower::util::ServiceExt;
 
-use crate::common;
+use crate::common::{self, server::TestServer};
 
 #[tokio::test]
 async fn health_check_returns_200_and_ok() {
-    let app = common::InMemoryTestContext::new_in_memory().app();
+    let app = TestServer::new_in_memory().await.app_router.clone();
 
-    let response = app.oneshot(common::get("/health")).await.unwrap();
+    let response = app.oneshot(common::helper::get("/health")).await.unwrap();
 
     assert_eq!(response.status(), StatusCode::OK);
 
     assert_eq!(
-        common::response_json(response).await,
+        common::helper::response_json(response).await,
         json!({"status": "ok", "service": "rustboard-api-test"})
     );
 }

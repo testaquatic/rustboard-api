@@ -1,0 +1,43 @@
+syntax = "proto3";
+
+package rustboard.notification;
+
+service NotificationService {
+  rpc Send(NotificationRequest) returns (NotificationResponse);
+  rpc SendBatch(BatchNotificationRequest) returns (BatchNotificationResponse);
+}
+
+message NotificationRequest {
+  string recipient_id = 1;
+  string sender_name = 2;
+  NotificationType notification_type = 3;
+  string title = 4;
+  string body = 5;
+  map<string, string> metadata = 6;
+}
+
+message NotificationResponse {
+  bool success = 1;
+  string message_id = 2;
+  string error_message = 3;
+}
+
+message BatchNotificationRequest {
+  repeated NotificationRequest notifications = 1;
+}
+
+message BatchNotificationResponse {
+  int32 total = 1;
+  int32 succeeded = 2;
+  int32 failed = 3;
+  repeated string failed_ids = 4;
+}
+
+enum NotificationType {
+  NOTIFICATION_TYPE_UNSPECIFIED = 0;
+  COMMENT_ADDED = 1;
+  POST_LIKED = 2;
+  MENTION = 3;
+}
+
+

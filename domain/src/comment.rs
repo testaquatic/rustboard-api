@@ -7,6 +7,7 @@ use utoipa::ToSchema;
 pub struct Comment {
     pub id: i64,
     pub post_id: i64,
+    pub post_author_id: i64,
     pub body: String,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,

@@ -8,3 +8,4 @@ pub mod router;
 pub mod service;
 pub mod shutdown;
 pub mod state;
+pub mod client;

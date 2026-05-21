@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
-use rustboard_domain::notification::Notification;
-use tokio::sync::{Semaphore, broadcast};
+use tokio::sync::Semaphore;
 
 use crate::{
+    client::notification::NotificationClient,
     config::Config,
     service::{comments::CommentService, posts::PostService, user::UserService},
 };
@@ -15,6 +15,6 @@ pub struct AppState {
     pub posts_service: Arc<PostService>,
     pub comments_service: Arc<CommentService>,
     pub users_service: Arc<UserService>,
-    pub notify_tx: broadcast::Sender<Notification>,
     pub ws_semaphore: Arc<Semaphore>,
+    pub notification_client: NotificationClient,
 }
