@@ -181,4 +181,3 @@ impl IntoResponse for AppError {
         (status, Json(body)).into_response()
     }
 }
-

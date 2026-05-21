@@ -1,15 +1,13 @@
 use std::{collections::HashMap, sync::Arc};
 
 use async_trait::async_trait;
-use rustboard_domain::{
-    comment::{Comment, CreateCommentInput},
-    error::RepositoryError,
-    repository::CommentRepository,
-};
+use rustboard_domain::comment::{Comment, CreateCommentInput};
 use sqlx::PgPool;
 use tokio::sync::Mutex;
 
-use crate::repository::posts::InMemoryPostRepository;
+use crate::repository::{
+    error::RepositoryError, posts::InMemoryPostRepository, types::CommentRepository,
+};
 
 pub struct PostgresCommentRepository {
     pool: PgPool,

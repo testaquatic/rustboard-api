@@ -1,4 +1,5 @@
 pub mod auth;
+pub mod client;
 pub mod config;
 pub mod error;
 pub mod handler;
@@ -8,4 +9,3 @@ pub mod router;
 pub mod service;
 pub mod shutdown;
 pub mod state;
-pub mod client;

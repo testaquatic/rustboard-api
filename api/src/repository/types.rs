@@ -2,13 +2,13 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-
-use crate::{
+use rustboard_domain::{
     comment::{Comment, CreateCommentInput},
-    error::RepositoryError,
     posts::{CreatePostInput, Post, UpdatePostInput},
     user::User,
 };
+
+use crate::repository::error::RepositoryError;
 
 #[async_trait]
 pub trait CommentRepository {

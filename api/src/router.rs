@@ -25,7 +25,6 @@ use crate::{
         comment::{CommentsOpenApi, create_comment, list_comments},
         meta::{HealthOpenApi, VersionOpenApi, health, version},
         posts::{PostsOpenApi, create_post, delete_post, get_post, list_posts, update_post},
-        ws,
     },
     middleware::{
         self, auth::AuthMiddleware, rate_limit_error::rete_limit_error_response,
@@ -102,8 +101,6 @@ pub fn protected_routes(state: AppState) -> Router<AppState> {
         .route("/posts/{id}", patch(update_post).delete(delete_post))
         // 댓글 작성
         .route("/posts/{post_id}/comments", post(create_comment))
-        // 댓글 알림
-        .route("/ws/notifications", get(ws::ws_notification))
         .route_layer(AuthMiddleware { state })
 }
 

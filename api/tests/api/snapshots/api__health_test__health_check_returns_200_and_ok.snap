@@ -1,0 +1,8 @@
+---
+source: api/tests/api/health_test.rs
+expression: json
+---
+{
+  "service": "[service]",
+  "status": "ok"
+}

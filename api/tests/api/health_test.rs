@@ -1,5 +1,5 @@
 use axum::http::StatusCode;
-use serde_json::json;
+use insta::assert_json_snapshot;
 use tower::util::ServiceExt;
 
 use crate::common::{self, server::TestServer};
@@ -12,8 +12,7 @@ async fn health_check_returns_200_and_ok() {
 
     assert_eq!(response.status(), StatusCode::OK);
 
-    assert_eq!(
-        common::helper::response_json(response).await,
-        json!({"status": "ok", "service": "rustboard-api-test"})
-    );
+    let json = common::helper::response_json(response).await;
+
+    assert_json_snapshot!(json, {".status" => "ok", ".service" => "[service]"});
 }

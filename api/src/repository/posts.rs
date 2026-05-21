@@ -2,15 +2,14 @@ use std::{cmp::Ordering, collections::HashMap};
 
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use rustboard_domain::{
-    error::RepositoryError,
-    posts::{CreatePostInput, Post, UpdatePostInput},
-    repository::PostRepository,
-};
+
+use rustboard_domain::posts::{CreatePostInput, Post, UpdatePostInput};
 use rustboard_telemetry::metrics;
 use sqlx::PgPool;
 use tokio::{sync::Mutex, time::Instant};
 use tracing::instrument;
+
+use crate::repository::{error::RepositoryError, types::PostRepository};
 
 /// 메모리 저장소
 #[derive(Default)]

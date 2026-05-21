@@ -2,7 +2,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-#[derive(Clone, Debug, sqlx::FromRow)]
+#[derive(Clone, Debug)]
 pub struct User {
     pub id: i64,
     pub email: String,

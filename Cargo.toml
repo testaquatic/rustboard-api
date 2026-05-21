@@ -48,6 +48,7 @@ sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "postgres", "macro
 thiserror = "2"
 # 비동기 런타임
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "signal"] }
+tokio-stream = { version = "0.1" }
 # GRPC
 tonic = "0.14"
 # GRPC

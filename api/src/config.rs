@@ -4,7 +4,9 @@ use std::net::SocketAddr;
 #[derive(Debug, Clone)]
 pub struct Config {
     pub bind_addr: SocketAddr,
-    pub grpc_addr: SocketAddr,
+    pub grpc_bind_addr: SocketAddr,
+    pub grpc_server_addr: SocketAddr,
+    pub grpc_max_connections: usize,
     pub service_name: String,
     pub database_url: String,
     pub jwt_secret: String,
@@ -30,10 +32,28 @@ impl Config {
             .parse::<SocketAddr>()
             .map_err(|e| ConfigError::Invalid("BIND_ADDR", e.to_string()))?;
 
-        let grpc_addr = std::env::var("BIND_ADDR").unwrap_or_else(|_| "0.0.0.0:50051".to_string());
-        let grpc_addr = grpc_addr
+        // GRPC_BIND_ADDR
+        // 기본값은 "0.0.0.0:50051"
+        let grpc_bind_addr =
+            std::env::var("GRPC_BIND_ADDR").unwrap_or_else(|_| "0.0.0.0:50051".to_string());
+        let grpc_bind_addr = grpc_bind_addr
             .parse::<SocketAddr>()
-            .map_err(|e| ConfigError::Invalid("BIND_ADDR", e.to_string()))?;
+            .map_err(|e| ConfigError::Invalid("GRPC_BIND_ADDR", e.to_string()))?;
+
+        // GRPC_SERVER_ADDR
+        // 기본값은 "127.0.0.1:50052"
+        let grpc_server_addr =
+            std::env::var("GRPC_SERVER_ADDR").unwrap_or_else(|_| "127.0.0.1:50052".to_string());
+        let grpc_server_addr = grpc_server_addr
+            .parse::<SocketAddr>()
+            .map_err(|e| ConfigError::Invalid("GRPC_SERVER_ADDR", e.to_string()))?;
+
+        // GRPC_MAX_CONNECTIONS
+        // 기본값은 1000
+        let grpc_max_connections = std::env::var("GRPC_MAX_CONNECTIONS")
+            .unwrap_or_else(|_| "1000".to_string())
+            .parse::<usize>()
+            .map_err(|e| ConfigError::Parse("GRPC_MAX_CONNECTIONS", e.to_string()))?;
 
         // SERVICE_NAME
         // 환경변수가 없으면 "rustboard-api"
@@ -59,7 +79,9 @@ impl Config {
 
         Ok(Self {
             bind_addr,
-            grpc_addr,
+            grpc_bind_addr,
+            grpc_server_addr,
+            grpc_max_connections,
             service_name,
             database_url,
             jwt_secret,

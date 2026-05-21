@@ -1,6 +1,4 @@
-use rustboard_domain::error::RepositoryError;
-
-use crate::error::AppError;
+use crate::{error::AppError, repository::error::RepositoryError};
 
 /// 서비스 계층에서 반환하는 오류
 #[derive(Debug, thiserror::Error)]

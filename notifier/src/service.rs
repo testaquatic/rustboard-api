@@ -29,6 +29,7 @@ impl NotificationService for NotifierService {
         let notification_type = NotificationType::try_from(req.notification_type)
             .unwrap_or(NotificationType::Unspecified);
 
+        // 로깅으로 대체한다.
         tracing::info!(
           recipient = %req.recipient_id,
           sender = %req.sender_name,
@@ -58,18 +59,19 @@ impl NotificationService for NotifierService {
 
         for notification in req.notifications {
             if notification.recipient_id.is_empty() {
-                failed = failed + 1;
+                failed += 1;
                 failed_ids.push(notification.recipient_id.clone());
                 tracing::warn!(recipient = %notification.recipient_id, "빈 recipient_id, 건너뜀");
                 continue;
             }
 
+            // 로깅으로 대체한다.
             tracing::info!(
               recipient = %notification.recipient_id,
               sender = %notification.sender_name,
               "배치 알림 전송"
             );
-            succeeded = succeeded + 1;
+            succeeded += 1;
         }
 
         Ok(Response::new(BatchNotificationResponse {

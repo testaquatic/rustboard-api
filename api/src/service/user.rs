@@ -1,11 +1,8 @@
 use std::sync::Arc;
 
-use rustboard_domain::{
-    repository::UserRepository,
-    user::{LoginInput, SignupInput, User},
-};
+use rustboard_domain::user::{LoginInput, SignupInput, User};
 
-use crate::{auth::password, service::error::ServiceError};
+use crate::{auth::password, repository::types::UserRepository, service::error::ServiceError};
 
 type DynUserRepository = Arc<dyn UserRepository + Send + Sync>;
 

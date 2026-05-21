@@ -1,11 +1,12 @@
 use std::sync::Arc;
 
-use rustboard_domain::{
-    comment::{Comment, CreateCommentInput},
-    repository::{CommentRepository, PostRepository},
-};
+use rustboard_domain::comment::{Comment, CreateCommentInput};
 
-use crate::{client::notification::NotificationClient, service::error::ServiceError};
+use crate::{
+    client::notification::NotificationClient,
+    repository::types::{CommentRepository, PostRepository},
+    service::error::ServiceError,
+};
 
 pub struct CommentService {
     posts_repo: Arc<dyn PostRepository + Send + Sync>,

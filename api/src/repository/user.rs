@@ -1,9 +1,11 @@
 use std::{collections::HashMap, sync::Arc};
 
 use async_trait::async_trait;
-use rustboard_domain::{error::RepositoryError, repository::UserRepository, user::User};
+use rustboard_domain::user::User;
 use sqlx::PgPool;
 use tokio::sync::Mutex;
+
+use crate::repository::{error::RepositoryError, types::UserRepository};
 
 pub struct PostgresUserRepository {
     pool: PgPool,

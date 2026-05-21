@@ -5,6 +5,9 @@ services:
             dockerfile: Dockerfile
         ports:
             - "3000:3000"
+        # gRPC
+        expose:
+            - "50051"
         env_file:
             - .env
         environment:

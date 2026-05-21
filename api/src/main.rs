@@ -12,6 +12,7 @@ use rustboard_api::{
     shutdown::shutdown_signal,
     state::AppState,
 };
+use rustboard_proto::notification::notification_service_server::NotificationServiceServer;
 use rustboard_telemetry::telemetry;
 use sqlx::postgres::PgPoolOptions;
 use tracing_subscriber::EnvFilter;
@@ -30,6 +31,7 @@ async fn main() -> Result<(), anyhow::Error> {
         }
     });
     // 우아한 종료를 위한 _gurad
+    // 텔레메트를 활성화한다.
     let _guard = telemetry::init_telemetry(env_filter)?;
 
     // 설정 읽기
@@ -44,8 +46,11 @@ async fn main() -> Result<(), anyhow::Error> {
     // 앱을 시작하면 DB마이그레이션을 자동 적용한다.
     sqlx::migrate!("../migrations").run(&pool).await?;
 
+    // gRPC 알림 서비스
+    let notifier = rustboard_notifier::service::NotifierService::new();
+
     // gRPC 클라이언트 생성
-    let notification_client = NotificationClient::connect("http://127.0.0.1:50051")
+    let notification_client = NotificationClient::connect(&config.grpc_server_addr.to_string())
         .await
         .expect("gRPC 알림 서버 연결 실패");
 
@@ -64,7 +69,7 @@ async fn main() -> Result<(), anyhow::Error> {
     let users_service = Arc::new(UserService::new(user_repo));
 
     // 동시 접근수를 제한하는 세마포어
-    let ws_semaphore = Arc::new(tokio::sync::Semaphore::new(1000));
+    let ws_semaphore = Arc::new(tokio::sync::Semaphore::new(config.grpc_max_connections));
 
     // AppState 생성
     let state = AppState {
@@ -80,20 +85,28 @@ async fn main() -> Result<(), anyhow::Error> {
     let app = create_app_router_with_middleware(&config, state);
     // 서버 시작
     let listener = tokio::net::TcpListener::bind(config.bind_addr).await?;
-    tracing::info!(
-        "{} listening on http://{}",
-        config.service_name,
-        listener.local_addr()?
-    );
 
-    let server = axum::serve(
-        listener,
-        app.into_make_service_with_connect_info::<SocketAddr>(),
-    )
-    .with_graceful_shutdown(shutdown_signal());
+    tracing::info!("HTTP 서버: {}", config.bind_addr);
+    tracing::info!("gRPC 서버: {}", config.grpc_server_addr);
 
-    if let Err(e) = server.await {
-        tracing::error!(error = %e, "서버 오류");
+    // 두 서버를 동시에 실행
+    tokio::select! {
+        result = axum::serve(
+            listener,
+            app.into_make_service_with_connect_info::<SocketAddr>(),
+        )
+        .with_graceful_shutdown(shutdown_signal()) => {
+            if let Err(e) = result {
+                tracing::error!(error = %e, "HTTP 서버 오류");
+            }
+        }
+        result = tonic::transport::Server::builder()
+            .add_service(NotificationServiceServer::new(notifier))
+            .serve_with_shutdown(config.grpc_bind_addr, shutdown_signal()) => {
+                if let Err(e) = result {
+                    tracing::error!(error = %e, "gRPC 서버 오류");
+                }
+            }
     }
 
     // 서버 종료 후 리소스 정리

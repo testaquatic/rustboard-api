@@ -1,12 +1,14 @@
 use chrono::{DateTime, Utc};
 use rustboard_domain::{
     posts::{CreatePostInput, Post, UpdatePostInput},
-    repository::DynPostRepository,
     role::Role,
 };
 use tracing::instrument;
 
-use crate::service::{check_ownership, error::ServiceError};
+use crate::{
+    repository::types::DynPostRepository,
+    service::{check_ownership, error::ServiceError},
+};
 
 const TITLE_MAX: usize = 200;
 const BODY_MAX: usize = 10_000;
