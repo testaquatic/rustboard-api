@@ -5,7 +5,7 @@ members = [
   "domain",
   "proto", 
   "telemetry"
-]
+, "api_server"]
 resolver = "2"
 
 [workspace.dependencies]
@@ -75,6 +75,8 @@ utoipa-axum = "0.2"
 utoipa-swagger-ui = { version = "9", features = ["axum"] }
 
 ##### 테스트용 크레이트
+# 벤치마크
+criterion = { version = "0.8.2", features = ["html_reports"] }
 # 임의의 문자열을 생성한다.
 fake = "5"
 http-body-util = "0.1"

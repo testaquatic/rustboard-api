@@ -1,0 +1,19 @@
+[package]
+name = "rustboard-api-server"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+rustboard-proto = {path = "../proto"}
+rustboard-notifier = {path = "../notifier"}
+rustboard-telemetry = {path = "../telemetry"}
+
+anyhow = {workspace = true}
+axum = {workspace = true}
+dotenvy = {workspace = true}
+rustboard-api = {path = "../api"}
+sqlx = {workspace = true}
+tokio = {workspace = true}
+tonic = {workspace = true}
+tracing = {workspace = true}
+tracing-subscriber = {workspace = true}

@@ -100,6 +100,8 @@ async fn main() -> Result<(), anyhow::Error> {
                 tracing::error!(error = %e, "HTTP 서버 오류");
             }
         }
+
+
         result = tonic::transport::Server::builder()
             .add_service(NotificationServiceServer::new(notifier))
             .serve_with_shutdown(config.grpc_bind_addr, shutdown_signal()) => {

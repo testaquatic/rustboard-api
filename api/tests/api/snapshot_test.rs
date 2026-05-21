@@ -1,9 +1,8 @@
 use axum::http::StatusCode;
 use insta::assert_json_snapshot;
+use rustboard_api::test_utils::{helper, test_server::TestServer};
 use serde_json::json;
 use tower::ServiceExt;
-
-use crate::common::{self, server::TestServer};
 
 #[tokio::test]
 async fn snapshot_create_post_response() {
@@ -17,8 +16,8 @@ async fn snapshot_create_post_response() {
     // 글 작성
     let response = test_server
         .app_router
-        .oneshot(common::helper::with_token(
-            common::helper::post_json(
+        .oneshot(helper::with_token(
+            helper::post_json(
                 "/posts",
                 json!({"title": "스냅샷 테스트 글", "content": "이 응답 구조를 고정합니다"}),
             ),
@@ -28,7 +27,7 @@ async fn snapshot_create_post_response() {
         .unwrap();
     assert_eq!(response.status(), StatusCode::CREATED);
 
-    let json = common::helper::response_json(response).await;
+    let json = helper::response_json(response).await;
 
     assert_json_snapshot!(json, {".id" => "[id]", ".author_id" => "[author_id]", ".created_at" => "[created_at]", ".updated_at" => "[updated_at]"});
 }
@@ -39,7 +38,7 @@ async fn snapshot_unauthorized_error() {
 
     let response = test_server
         .app_router
-        .oneshot(common::helper::post_json(
+        .oneshot(helper::post_json(
             "/posts",
             json!({"title": "No Token", "content": "실패"}),
         ))
@@ -47,7 +46,7 @@ async fn snapshot_unauthorized_error() {
         .unwrap();
     assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
 
-    let json = common::helper::response_json(response).await;
+    let json = helper::response_json(response).await;
 
     assert_json_snapshot!(json, {".error" => "unauthorized", ".message" => "[message]"});
 }
@@ -58,12 +57,12 @@ async fn snapshot_not_found_error() {
 
     let response = test_server
         .app_router
-        .oneshot(common::helper::get("/posts/999999"))
+        .oneshot(helper::get("/posts/999999"))
         .await
         .unwrap();
     assert_eq!(response.status(), StatusCode::NOT_FOUND);
 
-    let json = common::helper::response_json(response).await;
+    let json = helper::response_json(response).await;
 
     assert_json_snapshot!(json, {".error" => "not_found", ".message" => "[message]"});
 }
@@ -80,8 +79,8 @@ async fn snapshot_list_posts() {
         test_server
             .app_router
             .clone()
-            .oneshot(common::helper::with_token(
-                common::helper::post_json("/posts", json!({"title": title, "content": "본문"})),
+            .oneshot(helper::with_token(
+                helper::post_json("/posts", json!({"title": title, "content": "본문"})),
                 &token,
             ))
             .await
@@ -91,12 +90,12 @@ async fn snapshot_list_posts() {
     let response = test_server
         .app_router
         .clone()
-        .oneshot(common::helper::get("/posts"))
+        .oneshot(helper::get("/posts"))
         .await
         .unwrap();
     assert_eq!(response.status(), StatusCode::OK);
 
-    let json = common::helper::response_json(response).await;
+    let json = helper::response_json(response).await;
     let json_posts = json["posts"].clone();
 
     assert_json_snapshot!(

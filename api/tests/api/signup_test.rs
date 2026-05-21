@@ -1,7 +1,6 @@
+use rustboard_api::test_utils::{helper, test_server::TestServer};
 use serde_json::json;
 use tower::ServiceExt;
-
-use crate::common::{self, server::TestServer};
 
 #[tokio::test]
 async fn signup_duplicate_email_returns_422() {
@@ -11,7 +10,7 @@ async fn signup_duplicate_email_returns_422() {
     let response = test_server
         .app_router
         .clone()
-        .oneshot(common::helper::post_json(
+        .oneshot(helper::post_json(
             "/signup",
             json!({
                 "email": "test@example.com",
@@ -27,7 +26,7 @@ async fn signup_duplicate_email_returns_422() {
     let response = test_server
         .app_router
         .clone()
-        .oneshot(common::helper::post_json(
+        .oneshot(helper::post_json(
             "/signup",
             // 이메일 주소만 같다.
             json!({

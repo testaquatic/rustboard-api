@@ -5,8 +5,22 @@ use std::{
 
 use axum::Router;
 
+use fake::{
+    Fake,
+    faker::lorem::en::{Paragraph, Sentence},
+};
 use reqwest::header;
-use rustboard_api::{
+
+use rustboard_domain::posts::Post;
+use rustboard_proto::notification::notification_service_server::NotificationServiceServer;
+use rustboard_telemetry::telemetry::{OtelGuard, init_telemetry};
+use serde_json::json;
+use testcontainers::ContainerAsync;
+use testcontainers_modules::postgres::Postgres;
+use tokio::{net::TcpListener, task::JoinHandle};
+use tracing_subscriber::EnvFilter;
+
+use crate::{
     client::notification::NotificationClient,
     config::Config,
     repository::{
@@ -17,14 +31,6 @@ use rustboard_api::{
     service::{comments::CommentService, posts::PostService, user::UserService},
     state::AppState,
 };
-use rustboard_domain::posts::Post;
-use rustboard_proto::notification::notification_service_server::NotificationServiceServer;
-use rustboard_telemetry::telemetry::{OtelGuard, init_telemetry};
-use serde_json::json;
-use testcontainers::ContainerAsync;
-use testcontainers_modules::postgres::Postgres;
-use tokio::{net::TcpListener, task::JoinHandle};
-use tracing_subscriber::EnvFilter;
 
 /// 실제로 작동하는 서버이다.
 pub struct TestServer {
@@ -232,12 +238,10 @@ impl TestServer {
             .unwrap();
         assert_eq!(token_response.status(), reqwest::StatusCode::OK);
 
-        let token = token_response.json::<serde_json::Value>().await.unwrap()["token"]
+        token_response.json::<serde_json::Value>().await.unwrap()["token"]
             .as_str()
             .unwrap()
-            .to_string();
-
-        token
+            .to_string()
     }
     /// 글을 작성한다.
     pub async fn create_post(&self, token: &str, post: &Post) {
@@ -258,28 +262,28 @@ impl TestServer {
         assert_eq!(response.status(), reqwest::StatusCode::CREATED);
     }
 
-    // /// 정해준 수의 임의의 글을 생성한다
-    // pub async fn create_test_post(&self, token: &str, count: usize) {
-    //     for _ in 0..count {
-    //         let title = Sentence(5..20).fake::<String>();
-    //         let content = Paragraph(5..20).fake::<String>();
-    //         let post_body = json!({
-    //             "title": title,
-    //             "content": content,
-    //         });
+    /// 정해준 수의 임의의 글을 생성한다
+    pub async fn create_test_post(&self, token: &str, count: usize) {
+        for _ in 0..count {
+            let title = Sentence(5..20).fake::<String>();
+            let content = Paragraph(5..20).fake::<String>();
+            let post_body = json!({
+                "title": title,
+                "content": content,
+            });
 
-    //         let response = self
-    //             .reqwest_client
-    //             .post(format!("http://{}/posts", self.state.config.bind_addr))
-    //             .bearer_auth(token)
-    //             .header(header::CONTENT_TYPE, "application/json")
-    //             .json(&post_body)
-    //             .send()
-    //             .await
-    //             .unwrap();
-    //         assert_eq!(response.status(), reqwest::StatusCode::CREATED);
-    //     }
-    // }
+            let response = self
+                .reqwest_client
+                .post(format!("http://{}/posts", self.state.config.bind_addr))
+                .bearer_auth(token)
+                .header(header::CONTENT_TYPE, "application/json")
+                .json(&post_body)
+                .send()
+                .await
+                .unwrap();
+            assert_eq!(response.status(), reqwest::StatusCode::CREATED);
+        }
+    }
 
     // /// 임의의 댓글을 작성한다.
 

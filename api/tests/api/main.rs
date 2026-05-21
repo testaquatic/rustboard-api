@@ -1,4 +1,3 @@
-mod common;
 mod full_flow_test;
 mod health_test;
 mod integration_test;

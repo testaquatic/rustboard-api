@@ -3,7 +3,12 @@ name = "rustboard-api"
 version = "0.1.0"
 edition = "2024"
 
+[[bench]]
+name = "api_bench"
+harness = false
+
 [dependencies]
+fake = {workspace = true}
 # 워크스페이스 크레이트
 rustboard-domain = {path = "../domain"}
 rustboard-notifier = {path = "../notifier"}
@@ -17,13 +22,17 @@ axum = {workspace = true}
 chrono = {workspace = true}
 dotenvy = {workspace = true}
 futures-util = {workspace = true}
+http-body-util = {workspace = true}
 jsonwebtoken = {workspace = true}
 opentelemetry = {workspace = true}
 opentelemetry-semantic-conventions = {workspace = true}
 regex = {workspace = true}
+reqwest = {workspace = true}
 serde = {workspace = true}
 serde_json = {workspace = true}
 sqlx = {workspace = true}
+testcontainers = {workspace = true}
+testcontainers-modules = {workspace = true}
 thiserror = {workspace = true}
 tokio = {workspace = true}
 tokio-stream = {workspace = true}
@@ -39,10 +48,5 @@ utoipa-swagger-ui = {workspace = true}
 uuid = {workspace = true}
 
 [dev-dependencies]
-# fake = {workspace = true}
-http-body-util = {workspace = true}
 insta = {workspace = true}
-reqwest = {workspace = true}
-testcontainers = {workspace = true}
-testcontainers-modules = {workspace = true}
-# tokio-tungstenite = {workspace = true}
+criterion = {workspace = true}

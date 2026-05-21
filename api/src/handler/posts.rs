@@ -136,7 +136,7 @@ fn parse_cursor(s: &str) -> Option<(DateTime<Utc>, i64)> {
     Some((ts, id))
 }
 
-fn format_cursor(ts: DateTime<Utc>, id: i64) -> String {
+pub fn format_cursor(ts: DateTime<Utc>, id: i64) -> String {
     format!("{}_{}", ts.timestamp(), id)
 }
 

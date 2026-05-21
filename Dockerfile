@@ -29,7 +29,7 @@ RUN cargo build --release
 FROM debian:trixie-slim AS runtime
 WORKDIR /app
 
-COPY --from=chef-builder /app/target/release/rustboard-api /app/rustboard-api
+COPY --from=chef-builder /app/target/release/rustboard-api-server /app/rustboard-api-server
 
 EXPOSE 3000
 ENTRYPOINT [ "/app/rustboard-api" ]
