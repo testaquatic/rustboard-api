@@ -1,6 +1,6 @@
 [package]
 name = "rustboard-api"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 
 [dependencies]
@@ -13,5 +13,3 @@ serde = { version = "1", features = ["derive"] }
 # Async runtime
 tokio = { version = "1", features = ["macros", "parking_lot", "rt-multi-thread"] }
 
-# UUID generation
-uuid = { version = "1", features = ["v4"] }
