@@ -1,8 +1,9 @@
 use axum::{Router, routing::get};
+mod extract;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let app = Router::new().route("/", get(hello));
+    let app = Router::new().route("/whoami", get(whoami));
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await?;
     println!(
@@ -14,6 +15,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-async fn hello() -> &'static str {
-    "Hello, Axum!"
+async fn whoami(extract::RequestId(id): extract::RequestId) -> String {
+    format!("your request id is {}", id)
 }
