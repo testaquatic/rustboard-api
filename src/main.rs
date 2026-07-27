@@ -1,7 +1,12 @@
-use axum::{Json, Router, routing::get};
+use axum::{Json, Router, extract::State, routing::get};
 use serde::Serialize;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
+
+#[derive(Clone)]
+struct AppState {
+    service_name: &'static str,
+}
 
 #[derive(Serialize)]
 pub struct HealthResponse {
@@ -22,18 +27,23 @@ pub struct VersionResponse {
     version: &'static str,
 }
 
-async fn version() -> Json<VersionResponse> {
+async fn version(State(state): State<AppState>) -> Json<VersionResponse> {
     Json(VersionResponse {
-        service: "rustboard-api",
+        service: state.service_name,
         version: VERSION,
     })
 }
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let state = AppState {
+        service_name: "rustboard-api",
+    };
+
     let app = Router::new()
         .route("/health", get(health))
-        .route("/version", get(version));
+        .route("/version", get(version))
+        .with_state(state);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await?;
     println!(
