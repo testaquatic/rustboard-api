@@ -1,12 +1,8 @@
 use axum::{Json, Router, extract::State, routing::get};
+use rustboard_api::state::AppState;
 use serde::Serialize;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
-
-#[derive(Clone)]
-struct AppState {
-    service_name: &'static str,
-}
 
 #[derive(Serialize)]
 pub struct HealthResponse {

@@ -4,11 +4,15 @@ version = "0.1.2"
 edition = "2024"
 
 [dependencies]
+async-trait = "0.1"
 # Web framework
 axum = "0.8"
 
 # Serialization
 serde = { version = "1", features = ["derive"] }
+
+# error handling
+thiserror = "2"
 
 # Async runtime
 tokio = { version = "1", features = ["macros", "parking_lot", "rt-multi-thread"] }
