@@ -1,19 +1,17 @@
-use std::sync::Arc;
-
 use crate::{
     domain::post::{CreatePostInput, Post, ServiceError},
-    repository::post::PostRepository,
+    repository::post::DynPostRepository,
 };
 
 const TITLE_MAX: usize = 200;
 const BODY_MAX: usize = 10_000;
 
 pub struct PostService {
-    repo: Arc<dyn PostRepository + Send + Sync>,
+    repo: DynPostRepository,
 }
 
 impl PostService {
-    pub fn new(repo: Arc<dyn PostRepository + Send + Sync>) -> Self {
+    pub fn new(repo: DynPostRepository) -> Self {
         PostService { repo }
     }
 
@@ -46,5 +44,48 @@ impl PostService {
             .await
             .map_err(|_| ServiceError::Internal)?
             .ok_or(ServiceError::NotFound(id))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+
+    use crate::repository::post::InMemoryPostRepository;
+
+    use super::*;
+
+    fn make_service() -> PostService {
+        let repo = Arc::new(InMemoryPostRepository::new());
+
+        PostService::new(repo)
+    }
+
+    #[tokio::test]
+    async fn error_if_title_is_empty() {
+        let service = make_service();
+        let result = service
+            .create(CreatePostInput {
+                title: "     ".into(),
+                body: "본문".into(),
+            })
+            .await;
+
+        assert!(matches!(result, Err(ServiceError::EmptyTitle)));
+    }
+
+    #[tokio::test]
+    async fn get_post_by_id_after_creation() {
+        let service = make_service();
+        let created = service
+            .create(CreatePostInput {
+                title: "첫 글".into(),
+                body: "안녕".into(),
+            })
+            .await
+            .expect("생성 성공");
+        let found = service.get_by_id(created.id).await.expect("조회 성공");
+
+        assert_eq!(found.title, "첫 글");
     }
 }

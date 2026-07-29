@@ -1,7 +1,8 @@
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 use async_trait::async_trait;
 use thiserror::Error;
+use tokio::sync::Mutex;
 
 use crate::domain::post::{CreatePostInput, Post};
 
@@ -19,3 +20,63 @@ pub trait PostRepository {
 }
 
 pub type DynPostRepository = Arc<dyn PostRepository + Send + Sync>;
+
+#[derive(Default)]
+struct InMemoryState {
+    next_id: i64,
+    items: HashMap<i64, Post>,
+}
+
+pub struct InMemoryPostRepository {
+    inner: Mutex<InMemoryState>,
+}
+
+impl InMemoryPostRepository {
+    pub fn new() -> Self {
+        Self {
+            inner: Mutex::new(InMemoryState {
+                next_id: 1,
+                items: HashMap::new(),
+            }),
+        }
+    }
+}
+
+impl Default for InMemoryPostRepository {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[async_trait]
+impl PostRepository for InMemoryPostRepository {
+    async fn insert(&self, input: CreatePostInput) -> Result<Post, RepositoryError> {
+        let mut state = self.inner.lock().await;
+        let id = state.next_id;
+        state.next_id += 1;
+
+        let post = Post {
+            id,
+            title: input.title,
+            body: input.body,
+        };
+        state.items.insert(id, post.clone());
+
+        Ok(post)
+    }
+
+    async fn find_by_id(&self, id: i64) -> Result<Option<Post>, RepositoryError> {
+        let state = self.inner.lock().await;
+        let post = state.items.get(&id).cloned();
+
+        Ok(post)
+    }
+
+    async fn list(&self) -> Result<Vec<Post>, RepositoryError> {
+        let state = self.inner.lock().await;
+        let mut posts = state.items.values().cloned().collect::<Vec<Post>>();
+        posts.sort_by_key(|p| p.id);
+
+        Ok(posts)
+    }
+}

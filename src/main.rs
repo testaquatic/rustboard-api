@@ -1,5 +1,9 @@
-use axum::{Json, Router, extract::State, routing::get};
-use rustboard_api::state::AppState;
+use std::sync::Arc;
+
+use axum::{Json, Router, routing::get};
+use rustboard_api::{
+    repository::post::InMemoryPostRepository, service::post::PostService, state::AppState,
+};
 use serde::Serialize;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -23,9 +27,9 @@ pub struct VersionResponse {
     version: &'static str,
 }
 
-async fn version(State(state): State<AppState>) -> Json<VersionResponse> {
+async fn version() -> Json<VersionResponse> {
     Json(VersionResponse {
-        service: state.service_name,
+        service: "rustboard-api",
         version: VERSION,
     })
 }
@@ -33,7 +37,7 @@ async fn version(State(state): State<AppState>) -> Json<VersionResponse> {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let state = AppState {
-        service_name: "rustboard-api",
+        post_service: Arc::new(PostService::new(Arc::new(InMemoryPostRepository::new()))),
     };
 
     let app = Router::new()
