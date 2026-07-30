@@ -17,3 +17,6 @@ thiserror = "2"
 # Async runtime
 tokio = { version = "1", features = ["macros", "parking_lot", "rt-multi-thread"] }
 
+[dev-dependencies]
+tower = { version = "0.5", features = ["util"] }
+

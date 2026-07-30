@@ -12,7 +12,7 @@ pub struct PostService {
 
 impl PostService {
     pub fn new(repo: DynPostRepository) -> Self {
-        PostService { repo }
+        Self { repo }
     }
 
     pub async fn create(&self, input: CreatePostInput) -> Result<Post, ServiceError> {
@@ -36,6 +36,10 @@ impl PostService {
             .insert(clean)
             .await
             .map_err(|_| ServiceError::Internal)
+    }
+
+    pub async fn list(&self) -> Result<Vec<Post>, ServiceError> {
+        self.repo.list().await.map_err(|_| ServiceError::Internal)
     }
 
     pub async fn get_by_id(&self, id: i64) -> Result<Post, ServiceError> {

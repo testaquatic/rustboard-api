@@ -1,3 +1,8 @@
+use axum::{
+    Json,
+    http::StatusCode,
+    response::{IntoResponse, Response},
+};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize)]
@@ -25,4 +30,25 @@ pub enum ServiceError {
     NotFound(i64),
     #[error("내부 오류")]
     Internal,
+}
+
+#[derive(Serialize)]
+struct ErrorBody<'a> {
+    message: &'a str,
+}
+
+impl IntoResponse for ServiceError {
+    fn into_response(self) -> Response {
+        let (status, message) = match &self {
+            ServiceError::EmptyTitle
+            | ServiceError::TitleTooLong(_)
+            | ServiceError::BodyTooLong(_) => (StatusCode::BAD_REQUEST, self.to_string()),
+            ServiceError::NotFound(_) => (StatusCode::NOT_FOUND, self.to_string()),
+            ServiceError::Internal => (StatusCode::INTERNAL_SERVER_ERROR, "내부 오류".to_string()),
+        };
+
+        let body = Json(ErrorBody { message: &message });
+
+        (status, body).into_response()
+    }
 }
