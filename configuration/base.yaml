@@ -1,0 +1,2 @@
+bind_addr: "0.0.0.0:3000"
+service_name: "rustboard-api"
