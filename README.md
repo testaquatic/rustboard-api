@@ -12,7 +12,7 @@
 
 ```bash
 docker run -d \
-  --name rustboard-pg \
+  --name rustboard-db \
   -p 5432:5432 \
   -e POSTGRES_PASSWORD=postgres \
   -e POSTGRES_DB=rustboard \
@@ -23,17 +23,27 @@ docker run -d \
 ### 실행 확인
 
 ```bash
-docker exec -it rustboard-pg psql -U postgres -d rustboard -c "SELECT version();"
+docker exec -it rustboard-db psql -U postgres -d rustboard -c "SELECT version();"
 ```
 
 ### 중지
 
 ```bash
-docker stop rustboard-pg
+docker stop rustboard-db
 ```
 
 ### 시작
 
 ```bash
-docker start rustboard-pg
+docker start rustboard-db
 ```
+
+### 로그보기
+
+```bash
+docker logs -f rustboard-db
+```
+
+# API
+
+[Swagger UI](http://localhost:3000/swagger-ui/)

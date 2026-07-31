@@ -4,11 +4,18 @@ use rustboard_api::{
     configuration::get_configuration, repository::post::InMemoryPostRepository, router::app_routes,
     service::post::PostService, state::AppState, swagger::get_swagger_router,
 };
+use sqlx::postgres::PgPoolOptions;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 설정을 읽는다
     let configuration = Arc::new(get_configuration()?);
+
+    // DB 풀 만들기
+    let pool = PgPoolOptions::new()
+        .max_connections(5)
+        .connect(&configuration.database_url)
+        .await?;
 
     // 리포지토리 초기화
     let repo = Arc::new(InMemoryPostRepository::new());
@@ -20,6 +27,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let state = AppState {
         post_service,
         configuration: configuration.clone(),
+        pool,
     };
 
     // 라우터를 만들고 상태 붙이기

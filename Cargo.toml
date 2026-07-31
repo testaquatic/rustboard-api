@@ -1,6 +1,6 @@
 [package]
 name = "rustboard-api"
-version = "0.1.4"
+version = "0.1.5"
 edition = "2024"
 
 [dependencies]
@@ -8,12 +8,18 @@ async-trait = "0.1"
 # Web framework
 axum = "0.8"
 
+# 날짜/시간
+chrono = { version = "0.4", features = ["serde"]}
+
 # configuration
 config = "0.15"
 
 # Serialization
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+
+# 데이터베이스
+sqlx = { version = "0.8", features = ["runtime-tokio", "postgres", "chrono"]}
 
 # error handling
 thiserror = "2"

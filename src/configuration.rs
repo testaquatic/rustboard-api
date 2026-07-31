@@ -9,6 +9,7 @@ use thiserror::Error;
 pub struct Settings {
     pub bind_addr: SocketAddr,
     pub service_name: String,
+    pub database_url: String,
 }
 
 #[derive(Error, Debug)]
