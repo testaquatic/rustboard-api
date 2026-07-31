@@ -13,9 +13,9 @@ pub struct HealthResponse {
 }
 
 #[utoipa::path(
-    description = "작동상태를 확인한다.", 
-    get, 
-    path = "/health", 
+    description = "작동상태를 확인한다.",
+    get,
+    path = "/health",
     responses(
         (status = 200, description = "ok", body = HealthResponse, example = json!(HealthResponse{
             status: "ok",
@@ -29,7 +29,6 @@ pub async fn health() -> Json<HealthResponse> {
         service: "rustboard-api",
     })
 }
-
 
 #[derive(Serialize, ToSchema)]
 pub struct VersionResponse {
@@ -56,5 +55,8 @@ pub async fn version(State(state): State<AppState>) -> Json<VersionResponse> {
 }
 
 #[derive(OpenApi)]
-#[openapi(paths(health, version), components(schemas(HealthResponse, VersionResponse)))]
+#[openapi(
+    paths(health, version),
+    components(schemas(HealthResponse, VersionResponse))
+)]
 pub struct MetaOpenApiDoc;

@@ -7,6 +7,8 @@ edition = "2024"
 async-trait = "0.1"
 # Web framework
 axum = "0.8"
+
+# configuration
 config = "0.15"
 
 # Serialization
@@ -18,6 +20,8 @@ thiserror = "2"
 
 # Async runtime
 tokio = { version = "1", features = ["macros", "parking_lot", "rt-multi-thread"] }
+
+# Swagger
 utoipa = "5"
 utoipa-axum = "0.2"
 utoipa-swagger-ui = { version = "9", features = ["axum"] }
