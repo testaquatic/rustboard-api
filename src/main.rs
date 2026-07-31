@@ -17,6 +17,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .connect(&configuration.database_url)
         .await?;
 
+    // 앱 부팅 시 마이그레이션 자동 적용
+    sqlx::migrate!("./migrations").run(&pool).await?;
+
     // 리포지토리 초기화
     let repo = Arc::new(InMemoryPostRepository::new());
 
