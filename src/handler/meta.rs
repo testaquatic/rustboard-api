@@ -1,5 +1,7 @@
-use axum::Json;
+use axum::{Json, extract::State};
 use serde::Serialize;
+
+use crate::state::AppState;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -18,13 +20,13 @@ pub async fn health() -> Json<HealthResponse> {
 
 #[derive(Serialize)]
 pub struct VersionResponse {
-    service: &'static str,
+    service: String,
     version: &'static str,
 }
 
-pub async fn version() -> Json<VersionResponse> {
+pub async fn version(State(state): State<AppState>) -> Json<VersionResponse> {
     Json(VersionResponse {
-        service: "rustboard-api",
+        service: state.configuration.service_name.clone(),
         version: VERSION,
     })
 }
