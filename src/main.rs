@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use rustboard_api::{
     configuration::get_configuration, repository::post::InMemoryPostRepository, router::app_routes,
-    service::post::PostService, state::AppState,
+    service::post::PostService, state::AppState, swagger::get_swagger_router,
 };
 
 #[tokio::main]
@@ -23,7 +23,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     // 라우터를 만들고 상태 붙이기
-    let app = app_routes().with_state(state);
+    let app = app_routes()
+        .with_state(state.clone())
+        .merge(get_swagger_router(state));
 
     // 서버 실행
     let listener = tokio::net::TcpListener::bind(configuration.bind_addr).await?;
