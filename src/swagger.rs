@@ -5,7 +5,7 @@ use utoipa::{
 use utoipa_swagger_ui::SwaggerUi;
 
 use crate::{
-    handler::{meta::MetaOpenApiDoc, post::PostOpenApiDoc},
+    routes::{meta::MetaOpenApiDoc, post::PostOpenApiDoc},
     state::AppState,
 };
 

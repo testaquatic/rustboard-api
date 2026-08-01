@@ -1,7 +1,7 @@
 use axum::{Router, routing::get};
 
 use crate::{
-    handler::{
+    routes::{
         meta::{health, version},
         post::{create_post, get_post, list_posts},
     },

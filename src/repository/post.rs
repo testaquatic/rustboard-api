@@ -1,6 +1,7 @@
 use std::{collections::HashMap, sync::Arc};
 
 use async_trait::async_trait;
+use chrono::Utc;
 use sqlx::PgPool;
 use thiserror::Error;
 use tokio::sync::Mutex;
@@ -60,6 +61,8 @@ impl PostRepository for InMemoryPostRepository {
             id,
             title: input.title,
             body: input.body,
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
         };
         state.items.insert(id, post.clone());
 
@@ -95,28 +98,28 @@ impl PostgresPostRepository {
 #[async_trait]
 impl PostRepository for PostgresPostRepository {
     async fn insert(&self, input: CreatePostInput) -> Result<Post, RepositoryError> {
-        let post = sqlx::query_as!(
+        let row = sqlx::query_as!(
             Post,
             r#"
             INSERT INTO posts (title, body)
             VALUES ($1, $2)
-            RETURNING id, title, body
+            RETURNING id, title, body, created_at, updated_at
             "#,
             input.title,
-            input.body
+            input.body,
         )
         .fetch_one(&self.pool)
         .await
         .map_err(|_| RepositoryError::Backend)?;
 
-        Ok(post)
+        Ok(row)
     }
 
     async fn find_by_id(&self, id: i64) -> Result<Option<Post>, RepositoryError> {
-        let post = sqlx::query_as!(
+        let row = sqlx::query_as!(
             Post,
             r#"
-            SELECT id, title, body
+            SELECT id, title, body, created_at, updated_at
             FROM posts
             WHERE id = $1
             "#,
@@ -126,22 +129,23 @@ impl PostRepository for PostgresPostRepository {
         .await
         .map_err(|_| RepositoryError::Backend)?;
 
-        Ok(post)
+        Ok(row)
     }
 
     async fn list(&self) -> Result<Vec<Post>, RepositoryError> {
-        let posts = sqlx::query_as!(
+        let rows = sqlx::query_as!(
             Post,
             r#"
-            SELECT id, title, body
+            SELECT id, title, body, created_at, updated_at
             FROM posts
-            ORDER BY created_at DESC
+            ORDER BY created_at DESC, id DESC
+            LIMIT 50
             "#
         )
         .fetch_all(&self.pool)
         .await
         .map_err(|_| RepositoryError::Backend)?;
 
-        Ok(posts)
+        Ok(rows)
     }
 }

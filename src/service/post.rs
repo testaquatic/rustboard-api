@@ -38,16 +38,16 @@ impl PostService {
             .map_err(|_| ServiceError::Internal)
     }
 
-    pub async fn list(&self) -> Result<Vec<Post>, ServiceError> {
-        self.repo.list().await.map_err(|_| ServiceError::Internal)
-    }
-
     pub async fn get_by_id(&self, id: i64) -> Result<Post, ServiceError> {
         self.repo
             .find_by_id(id)
             .await
             .map_err(|_| ServiceError::Internal)?
             .ok_or(ServiceError::NotFound(id))
+    }
+
+    pub async fn list_recent(&self) -> Result<Vec<Post>, ServiceError> {
+        self.repo.list().await.map_err(|_| ServiceError::Internal)
     }
 }
 
