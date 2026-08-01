@@ -43,7 +43,7 @@ pub struct VersionResponse {
     responses(
         (status = 200, description = "ok", body = VersionResponse, example = json!(VersionResponse{
             service: "rustboard-api".to_string(),
-            version: "0.1.4",
+            version: VERSION,
         }))
     )
 )]

@@ -8,7 +8,7 @@ use serde::Deserialize;
 use utoipa::{IntoParams, OpenApi};
 
 use crate::{
-    domain::post::{CreatePostInput, PostResponse, ServiceError},
+    domain::post::{CreatePostInput, PostResponse, ServiceError, UpdatePostInput},
     state::AppState,
 };
 
@@ -96,9 +96,33 @@ pub async fn create_post(
     Ok((StatusCode::CREATED, Json(PostResponse::from(post))))
 }
 
+#[utoipa::path(
+    description = "특정 id를 가진 게시글을 수정한다.",
+    patch,
+    path = "/posts/{id}",
+    params(
+        ("id", description = "게시글 id")
+    ),
+    request_body = UpdatePostInput,
+    responses(
+        (status = StatusCode::OK, description = "성공적으로 게시글을 수정", body = PostResponse),
+        (status = StatusCode::NOT_FOUND, description = "게시글을 찾을 수 없음", body = ServiceError, example = json!({"message": ServiceError::NotFound(1).to_string()})),
+        (status = StatusCode::BAD_REQUEST, description = "잘못된 요청", example = json!({"message": ServiceError::EmptyTitle.to_string()}))
+    )
+)]
+pub async fn update_post(
+    State(state): State<AppState>,
+    Path(id): Path<i64>,
+    Json(input): Json<UpdatePostInput>,
+) -> Result<Json<PostResponse>, ServiceError> {
+    let post = state.post_service.update(id, input).await?;
+
+    Ok(Json(PostResponse::from(post)))
+}
+
 #[derive(OpenApi)]
 #[openapi(
-    paths(list_posts, get_post, create_post),
-    components(schemas(CreatePostInput, ServiceError, PostResponse))
+    paths(list_posts, get_post, create_post, update_post),
+    components(schemas(CreatePostInput, UpdatePostInput, ServiceError, PostResponse))
 )]
 pub struct PostOpenApiDoc;

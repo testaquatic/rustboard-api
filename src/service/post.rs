@@ -1,5 +1,5 @@
 use crate::{
-    domain::post::{CreatePostInput, Post, ServiceError},
+    domain::post::{CreatePostInput, Post, ServiceError, UpdatePostInput},
     repository::post::DynPostRepository,
 };
 
@@ -48,6 +48,32 @@ impl PostService {
 
     pub async fn list_recent(&self) -> Result<Vec<Post>, ServiceError> {
         self.repo.list().await.map_err(|_| ServiceError::Internal)
+    }
+
+    pub async fn update(&self, id: i64, input: UpdatePostInput) -> Result<Post, ServiceError> {
+        if input.title.is_none() && input.body.is_none() {
+            return Err(ServiceError::EmptyTitle);
+        }
+        if let Some(title) = &input.title {
+            let trimmed = title.trim();
+            if trimmed.is_empty() {
+                return Err(ServiceError::EmptyTitle);
+            }
+            if trimmed.chars().count() > TITLE_MAX {
+                return Err(ServiceError::TitleTooLong(TITLE_MAX));
+            }
+        }
+        if let Some(body) = &input.body {
+            if body.chars().count() > BODY_MAX {
+                return Err(ServiceError::BodyTooLong(BODY_MAX));
+            }
+        }
+
+        self.repo
+            .update(id, input)
+            .await
+            .map_err(|_| ServiceError::Internal)?
+            .ok_or(ServiceError::NotFound(id))
     }
 }
 
