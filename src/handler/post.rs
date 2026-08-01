@@ -36,12 +36,15 @@ pub async fn list_posts(State(state): State<AppState>) -> Result<Json<Vec<Post>>
 }
 
 #[utoipa::path(
-    description = "게시글 상세정보를 가져온다.",
+    description = "특정 id를 가진 게시글을 가져온다.",
     get,
     path = "/posts/{id}",
+    params(
+        ("id", description = "게시글 id")
+    ),
     responses(
         (status = 200, description = "ok", body = Post),
-        (status = 404, description = "게시글을 찾을 수 없습니다", body = ServiceError)
+        (status = 404, description = "게시글을 찾을 수 없습니다", body = ServiceError, example = json!({"message": ServiceError::NotFound(1).to_string()}))
     )
 )]
 pub async fn get_post(
@@ -59,7 +62,7 @@ pub async fn get_post(
     path = "/posts",
     responses(
         (status = 201, description = "ok", body = Post),
-        (status = 400, description = "잘못된 요청", body = ServiceError)
+        (status = 400, description = "잘못된 요청", body = ServiceError, example = json!({"message": ServiceError::EmptyTitle.to_string()}))
     )
 )]
 pub async fn create_post(
