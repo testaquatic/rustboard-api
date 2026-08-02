@@ -3,56 +3,100 @@ use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
 };
-use chrono::Utc;
-use serde::Deserialize;
-use utoipa::{IntoParams, OpenApi};
+use chrono::{DateTime, TimeZone, Utc};
+use serde::{Deserialize, Serialize};
+use utoipa::{IntoParams, OpenApi, ToSchema};
 
 use crate::{
     domain::post::{CreatePostInput, PostResponse, ServiceError, UpdatePostInput},
     state::AppState,
 };
 
+const DEFAULT_LIMIT: i32 = 20;
+const MAX_LIMIT: i32 = 100;
+
 #[derive(Debug, Deserialize, IntoParams)]
-pub struct ListQuery {}
+#[into_params(parameter_in = Query)]
+pub struct ListQuery {
+    /// 커서 문자열
+    /// "{created_at}_{id}" 형태여야 한다.
+    /// created_at는 유닉스 타임스탬프이다.
+    #[into_params(required = false, example = Utc::now().timestamp())  ]
+    pub cursor: Option<String>,
+    #[into_params(required = false, default = DEFAULT_LIMIT, maximum = MAX_LIMIT, minimum = 1)]
+    pub limit: Option<i32>,
+}
+
+/// 커서 문자열을 (created_at, id) 튜플로 변환한다.
+fn parse_cursor(s: &str) -> Option<(DateTime<Utc>, i64)> {
+    let (left, right) = s.split_once('_')?;
+    let secs = left.parse::<i64>().ok()?;
+    let id = right.parse::<i64>().ok()?;
+    let ts = Utc.timestamp_opt(secs, 0).single()?;
+
+    Some((ts, id))
+}
+
+/// cursor 문자열을 생성한다.
+fn format_cursor(ts: DateTime<Utc>, id: i64) -> String {
+    format!("{}_{}", ts.timestamp(), id)
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct PostListResponse {
+    pub items: Vec<PostResponse>,
+    pub next_cursor: Option<String>,
+}
 
 #[utoipa::path(
     description = "게시글 목록을 가져온다.",
     get,
     path = "/posts",
-    params(
-        ListQuery
-    ),
+    params(ListQuery),
     responses(
-        (status = StatusCode::OK, description = "성공적으로 게시글의 목록을 반환", body = [PostResponse], example = json!([
-            PostResponse{
-                id: 1,
-                title: "Post 1".to_string(),
-                body: "Body 1".to_string(),
-                created_at: Utc::now(),
-                updated_at: Utc::now(),
-            },
-            PostResponse{
-                id: 2,
-                title: "Post 2".to_string(),
-                body: "Body 2".to_string(),
-                created_at: Utc::now(),
-                updated_at: Utc::now(),
-            },
-        ]))
+        (
+            status = StatusCode::OK,
+            description = "성공적으로 게시글의 목록을 반환. 마지막 페이지는 next_cursor가 null",
+            body = [PostListResponse],
+            example = json!(
+                PostListResponse{
+                    items: vec![
+                        PostResponse{
+                            id: 1,
+                            title: "Post 1".to_string(),
+                            body: "Body 1".to_string(),
+                            created_at: Utc::now(),
+                            updated_at: Utc::now(),
+                        },
+                        PostResponse{
+                            id: 2,
+                            title: "Post 2".to_string(),
+                            body: "Body 2".to_string(),
+                            created_at: Utc::now(),
+                            updated_at: Utc::now(),
+                        },
+                    ],
+                    next_cursor: Some(format_cursor(Utc::now(), 2)),
+                }
+            )
+        ),
     ),
     tags = ["posts"]
 )]
 pub async fn list_posts(
     State(state): State<AppState>,
-    _query: Query<ListQuery>,
-) -> Result<Json<Vec<PostResponse>>, ServiceError> {
-    let body = state
-        .post_service
-        .list_recent()
-        .await?
+    query: Query<ListQuery>,
+) -> Result<Json<PostListResponse>, ServiceError> {
+    let limit = query.limit.unwrap_or(DEFAULT_LIMIT).clamp(1, MAX_LIMIT);
+    let cursor = query.cursor.as_ref().and_then(|s| parse_cursor(s));
+    let posts = state.post_service.list_recent(cursor, limit).await?;
+
+    let next_cursor = posts.last().map(|p| format_cursor(p.created_at, p.id));
+    let items = posts
         .into_iter()
         .map(PostResponse::from)
         .collect::<Vec<_>>();
+    let body = PostListResponse { items, next_cursor };
 
     Ok(Json(body))
 }

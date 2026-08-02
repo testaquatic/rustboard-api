@@ -1,3 +1,5 @@
+use chrono::{DateTime, Utc};
+
 use crate::{
     domain::post::{CreatePostInput, Post, ServiceError, UpdatePostInput},
     repository::post::DynPostRepository,
@@ -46,8 +48,15 @@ impl PostService {
             .ok_or(ServiceError::NotFound(id))
     }
 
-    pub async fn list_recent(&self) -> Result<Vec<Post>, ServiceError> {
-        self.repo.list().await.map_err(|_| ServiceError::Internal)
+    pub async fn list_recent(
+        &self,
+        cursor: Option<(DateTime<Utc>, i64)>,
+        limit: i32,
+    ) -> Result<Vec<Post>, ServiceError> {
+        self.repo
+            .list(cursor, limit)
+            .await
+            .map_err(|_| ServiceError::Internal)
     }
 
     pub async fn update(&self, id: i64, input: UpdatePostInput) -> Result<Post, ServiceError> {
@@ -94,19 +103,31 @@ impl PostService {
 mod tests {
     use std::sync::Arc;
 
-    use crate::repository::post::InMemoryPostRepository;
+    use sqlx::postgres::PgPoolOptions;
+
+    use crate::{configuration::get_configuration, repository::post::PostgresPostRepository};
 
     use super::*;
 
-    fn make_service() -> PostService {
-        let repo = Arc::new(InMemoryPostRepository::new());
+    async fn make_service() -> PostService {
+        // 설정을 읽는다
+        let configuration = Arc::new(get_configuration().expect("Failed to get configuration"));
+
+        // DB 풀 만들기
+        let pool = PgPoolOptions::new()
+            .max_connections(5)
+            .connect(&configuration.database_url)
+            .await
+            .expect("Failed to connect database");
+
+        let repo = Arc::new(PostgresPostRepository::new(pool));
 
         PostService::new(repo)
     }
 
     #[tokio::test]
     async fn error_if_title_is_empty() {
-        let service = make_service();
+        let service = make_service().await;
         let result = service
             .create(CreatePostInput {
                 title: "     ".into(),
@@ -119,7 +140,7 @@ mod tests {
 
     #[tokio::test]
     async fn get_post_by_id_after_creation() {
-        let service = make_service();
+        let service = make_service().await;
         let created = service
             .create(CreatePostInput {
                 title: "첫 글".into(),

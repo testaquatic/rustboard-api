@@ -28,6 +28,16 @@ impl CommentService {
             return Err(ServiceError::EmptyTitle);
         }
 
+        // 부모 게시글이 존재하는지 확인한다.
+        let parent = self
+            .posts_repo
+            .find_by_id(post_id)
+            .await
+            .map_err(|_| ServiceError::Internal)?;
+        if parent.is_none() {
+            return Err(ServiceError::NotFound(post_id));
+        }
+
         self.comments_repo
             .insert(post_id, input)
             .await

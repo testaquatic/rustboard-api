@@ -3,7 +3,7 @@ use std::sync::Arc;
 use axum::http::Request;
 use rustboard_api::{
     configuration::get_configuration,
-    repository::{comment::PostgresCommentRepository, post::InMemoryPostRepository},
+    repository::{comment::PostgresCommentRepository, post::PostgresPostRepository},
     router::app_routes,
     service::{comment::CommentService, post::PostService},
     state::AppState,
@@ -20,7 +20,9 @@ async fn health_returns_200_without_db() {
         .await
         .expect("Failed to connect to database");
 
-    let posts_repo = Arc::new(InMemoryPostRepository::new());
+    sqlx::migrate!("./migrations").run(&pool).await.unwrap();
+
+    let posts_repo = Arc::new(PostgresPostRepository::new(pool.clone()));
     let comments_repo = Arc::new(PostgresCommentRepository::new(pool.clone()));
 
     let state = AppState {

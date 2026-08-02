@@ -1,10 +1,9 @@
-use std::{collections::HashMap, sync::Arc};
+use std::sync::Arc;
 
 use async_trait::async_trait;
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use sqlx::{PgPool, query_as};
 use thiserror::Error;
-use tokio::sync::Mutex;
 
 use crate::domain::post::{CreatePostInput, Post, UpdatePostInput};
 
@@ -18,7 +17,11 @@ pub enum RepositoryError {
 pub trait PostRepository {
     async fn insert(&self, input: CreatePostInput) -> Result<Post, RepositoryError>;
     async fn find_by_id(&self, id: i64) -> Result<Option<Post>, RepositoryError>;
-    async fn list(&self) -> Result<Vec<Post>, RepositoryError>;
+    async fn list(
+        &self,
+        cursor: Option<(DateTime<Utc>, i64)>,
+        limit: i32,
+    ) -> Result<Vec<Post>, RepositoryError>;
     async fn update(
         &self,
         id: i64,
@@ -28,98 +31,6 @@ pub trait PostRepository {
 }
 
 pub type DynPostRepository = Arc<dyn PostRepository + Send + Sync>;
-
-#[derive(Default)]
-struct InMemoryState {
-    next_id: i64,
-    items: HashMap<i64, Post>,
-}
-
-pub struct InMemoryPostRepository {
-    inner: Mutex<InMemoryState>,
-}
-
-impl InMemoryPostRepository {
-    pub fn new() -> Self {
-        Self {
-            inner: Mutex::new(InMemoryState {
-                next_id: 1,
-                items: HashMap::new(),
-            }),
-        }
-    }
-}
-
-impl Default for InMemoryPostRepository {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-#[async_trait]
-impl PostRepository for InMemoryPostRepository {
-    async fn insert(&self, input: CreatePostInput) -> Result<Post, RepositoryError> {
-        let mut state = self.inner.lock().await;
-        let id = state.next_id;
-        state.next_id += 1;
-
-        let post = Post {
-            id,
-            title: input.title,
-            body: input.body,
-            created_at: Utc::now(),
-            updated_at: Utc::now(),
-        };
-        state.items.insert(id, post.clone());
-
-        Ok(post)
-    }
-
-    async fn find_by_id(&self, id: i64) -> Result<Option<Post>, RepositoryError> {
-        let state = self.inner.lock().await;
-        let post = state.items.get(&id).cloned();
-
-        Ok(post)
-    }
-
-    async fn list(&self) -> Result<Vec<Post>, RepositoryError> {
-        let state = self.inner.lock().await;
-        let mut posts = state.items.values().cloned().collect::<Vec<Post>>();
-        posts.sort_by_key(|p| p.id);
-
-        Ok(posts)
-    }
-
-    async fn update(
-        &self,
-        id: i64,
-        input: UpdatePostInput,
-    ) -> Result<Option<Post>, RepositoryError> {
-        let mut state = self.inner.lock().await;
-        let post = state.items.get_mut(&id);
-
-        match post {
-            Some(post) => {
-                if let Some(title) = input.title {
-                    post.title = title;
-                }
-                if let Some(body) = input.body {
-                    post.body = body;
-                }
-                post.updated_at = Utc::now();
-                Ok(Some(post.clone()))
-            }
-            None => Ok(None),
-        }
-    }
-
-    async fn delete(&self, id: i64) -> Result<bool, RepositoryError> {
-        let mut state = self.inner.lock().await;
-        let deleted = state.items.remove(&id);
-
-        Ok(deleted.is_some())
-    }
-}
 
 pub struct PostgresPostRepository {
     pool: PgPool,
@@ -168,21 +79,47 @@ impl PostRepository for PostgresPostRepository {
         Ok(row)
     }
 
-    async fn list(&self) -> Result<Vec<Post>, RepositoryError> {
-        let rows = sqlx::query_as!(
-            Post,
-            r#"
-            SELECT id, title, body, created_at, updated_at
-            FROM posts
-            ORDER BY created_at DESC, id DESC
-            LIMIT 50
-            "#
-        )
-        .fetch_all(&self.pool)
-        .await
-        .map_err(|_| RepositoryError::Backend)?;
+    async fn list(
+        &self,
+        cursor: Option<(DateTime<Utc>, i64)>,
+        limit: i32,
+    ) -> Result<Vec<Post>, RepositoryError> {
+        let rows = match cursor {
+            Some((ts, id)) => {
+                sqlx::query_as!(
+                    Post,
+                    r#"
+                    SELECT id, title, body, created_at, updated_at
+                    FROM posts
+                    WHERE (created_at, id) < ($1, $2)
+                    ORDER BY created_at DESC, id DESC
+                    LIMIT $3
+                    "#,
+                    ts,
+                    id,
+                    limit as i64,
+                )
+                .fetch_all(&self.pool)
+                .await
+            }
 
-        Ok(rows)
+            None => {
+                sqlx::query_as!(
+                    Post,
+                    r#"
+                    SELECT id, title, body, created_at, updated_at
+                    FROM posts
+                    ORDER BY created_at DESC, id DESC
+                    LIMIT $1
+                    "#,
+                    limit as i64
+                )
+                .fetch_all(&self.pool)
+                .await
+            }
+        };
+
+        rows.map_err(|_| RepositoryError::Backend)
     }
 
     async fn update(
