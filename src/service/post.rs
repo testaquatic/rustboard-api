@@ -63,10 +63,10 @@ impl PostService {
                 return Err(ServiceError::TitleTooLong(TITLE_MAX));
             }
         }
-        if let Some(body) = &input.body {
-            if body.chars().count() > BODY_MAX {
-                return Err(ServiceError::BodyTooLong(BODY_MAX));
-            }
+        if let Some(body) = &input.body
+            && body.chars().count() > BODY_MAX
+        {
+            return Err(ServiceError::BodyTooLong(BODY_MAX));
         }
 
         self.repo

@@ -21,7 +21,8 @@ pub struct HealthResponse {
             status: "ok",
             service: "rustboard-api",
         }))
-    )
+    ),
+    tags=["meta"]
 )]
 pub async fn health() -> Json<HealthResponse> {
     Json(HealthResponse {
@@ -45,7 +46,8 @@ pub struct VersionResponse {
             service: "rustboard-api".to_string(),
             version: VERSION,
         }))
-    )
+    ),
+    tags=["meta"]
 )]
 pub async fn version(State(state): State<AppState>) -> Json<VersionResponse> {
     Json(VersionResponse {
@@ -57,6 +59,7 @@ pub async fn version(State(state): State<AppState>) -> Json<VersionResponse> {
 #[derive(OpenApi)]
 #[openapi(
     paths(health, version),
+    tags((name = "meta", description = "메타 API")),
     components(schemas(HealthResponse, VersionResponse))
 )]
 pub struct MetaOpenApiDoc;

@@ -39,7 +39,8 @@ pub struct ListQuery {}
                 updated_at: Utc::now(),
             },
         ]))
-    )
+    ),
+    tags = ["posts"]
 )]
 pub async fn list_posts(
     State(state): State<AppState>,
@@ -66,7 +67,8 @@ pub async fn list_posts(
     responses(
         (status = StatusCode::OK, description = "성공적으로 게시글을 반환", body = PostResponse),
         (status = StatusCode::NOT_FOUND, description = "게시글을 찾을 수 없음", body = ServiceError, example = json!({"message": ServiceError::NotFound(1).to_string()}))
-    )
+    ),
+    tags = ["posts"]
 )]
 pub async fn get_post(
     State(state): State<AppState>,
@@ -85,7 +87,8 @@ pub async fn get_post(
     responses(
         (status = StatusCode::CREATED, description = "글 생성 성공", body = PostResponse),
         (status = StatusCode::BAD_REQUEST, description = "잘못된 요청", example = json!({"message": ServiceError::EmptyTitle.to_string()}))
-    )
+    ),
+    tags = ["posts"]
 )]
 pub async fn create_post(
     State(state): State<AppState>,
@@ -108,7 +111,8 @@ pub async fn create_post(
         (status = StatusCode::OK, description = "성공적으로 게시글을 수정", body = PostResponse),
         (status = StatusCode::NOT_FOUND, description = "게시글을 찾을 수 없음", body = ServiceError, example = json!({"message": ServiceError::NotFound(1).to_string()})),
         (status = StatusCode::BAD_REQUEST, description = "잘못된 요청", example = json!({"message": ServiceError::EmptyTitle.to_string()}))
-    )
+    ),
+    tags = ["posts"]
 )]
 pub async fn update_post(
     State(state): State<AppState>,
@@ -129,8 +133,12 @@ pub async fn update_post(
     ),
     responses(
         (status = StatusCode::NO_CONTENT, description = "성공적으로 게시글을 삭제"),
-        (status = StatusCode::NOT_FOUND, description = "게시글을 찾을 수 없음", body = ServiceError, example = json!({"message": ServiceError::NotFound(1).to_string()})),
-    )
+        (
+            status = StatusCode::NOT_FOUND, description = "게시글을 찾을 수 없음", body = ServiceError, 
+            example = json!({"message": ServiceError::NotFound(1).to_string()})
+        ),
+    ),
+    tags = ["posts"]
 )]
 pub async fn delete_post(
     State(state): State<AppState>,
@@ -144,6 +152,7 @@ pub async fn delete_post(
 #[derive(OpenApi)]
 #[openapi(
     paths(list_posts, get_post, create_post, update_post, delete_post),
+    tags((name = "posts", description = "게시글 API")),
     components(schemas(CreatePostInput, UpdatePostInput, ServiceError, PostResponse))
 )]
 pub struct PostOpenApiDoc;

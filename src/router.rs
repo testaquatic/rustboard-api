@@ -2,6 +2,7 @@ use axum::{Router, routing::get};
 
 use crate::{
     routes::{
+        comment::{create_comment, list_comments},
         meta::{health, version},
         post::{create_post, delete_post, get_post, list_posts, update_post},
     },
@@ -16,5 +17,9 @@ pub fn app_routes() -> Router<AppState> {
         .route(
             "/posts/{id}",
             get(get_post).patch(update_post).delete(delete_post),
+        )
+        .route(
+            "/posts/{post_id}/comments",
+            get(list_comments).post(create_comment),
         )
 }
