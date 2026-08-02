@@ -24,6 +24,7 @@ pub trait PostRepository {
         id: i64,
         input: UpdatePostInput,
     ) -> Result<Option<Post>, RepositoryError>;
+    async fn delete(&self, id: i64) -> Result<bool, RepositoryError>;
 }
 
 pub type DynPostRepository = Arc<dyn PostRepository + Send + Sync>;
@@ -110,6 +111,13 @@ impl PostRepository for InMemoryPostRepository {
             }
             None => Ok(None),
         }
+    }
+
+    async fn delete(&self, id: i64) -> Result<bool, RepositoryError> {
+        let mut state = self.inner.lock().await;
+        let deleted = state.items.remove(&id);
+
+        Ok(deleted.is_some())
     }
 }
 
@@ -201,5 +209,20 @@ impl PostRepository for PostgresPostRepository {
         .map_err(|_| RepositoryError::Backend)?;
 
         Ok(row)
+    }
+
+    async fn delete(&self, id: i64) -> Result<bool, RepositoryError> {
+        let result = sqlx::query!(
+            r#"
+            DELETE FROM posts
+            WHERE id = $1
+            "#,
+            id
+        )
+        .execute(&self.pool)
+        .await
+        .map_err(|_| RepositoryError::Backend)?;
+
+        Ok(result.rows_affected() == 1)
     }
 }

@@ -120,9 +120,30 @@ pub async fn update_post(
     Ok(Json(PostResponse::from(post)))
 }
 
+#[utoipa::path(
+    description = "특정 id를 가진 게시글을 삭제한다.",
+    delete,
+    path = "/posts/{id}",
+    params(
+        ("id", description = "게시글 id")
+    ),
+    responses(
+        (status = StatusCode::NO_CONTENT, description = "성공적으로 게시글을 삭제"),
+        (status = StatusCode::NOT_FOUND, description = "게시글을 찾을 수 없음", body = ServiceError, example = json!({"message": ServiceError::NotFound(1).to_string()})),
+    )
+)]
+pub async fn delete_post(
+    State(state): State<AppState>,
+    Path(id): Path<i64>,
+) -> Result<StatusCode, ServiceError> {
+    state.post_service.delete(id).await?;
+
+    Ok(StatusCode::NO_CONTENT)
+}
+
 #[derive(OpenApi)]
 #[openapi(
-    paths(list_posts, get_post, create_post, update_post),
+    paths(list_posts, get_post, create_post, update_post, delete_post),
     components(schemas(CreatePostInput, UpdatePostInput, ServiceError, PostResponse))
 )]
 pub struct PostOpenApiDoc;

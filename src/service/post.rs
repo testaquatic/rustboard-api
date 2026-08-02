@@ -75,6 +75,19 @@ impl PostService {
             .map_err(|_| ServiceError::Internal)?
             .ok_or(ServiceError::NotFound(id))
     }
+
+    pub async fn delete(&self, id: i64) -> Result<(), ServiceError> {
+        let removed = self
+            .repo
+            .delete(id)
+            .await
+            .map_err(|_| ServiceError::Internal)?;
+        if !removed {
+            return Err(ServiceError::NotFound(id));
+        }
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]

@@ -3,7 +3,7 @@ use axum::{Router, routing::get};
 use crate::{
     routes::{
         meta::{health, version},
-        post::{create_post, get_post, list_posts, update_post},
+        post::{create_post, delete_post, get_post, list_posts, update_post},
     },
     state::AppState,
 };
@@ -13,5 +13,8 @@ pub fn app_routes() -> Router<AppState> {
         .route("/health", get(health))
         .route("/version", get(version))
         .route("/posts", get(list_posts).post(create_post))
-        .route("/posts/{id}", get(get_post).patch(update_post))
+        .route(
+            "/posts/{id}",
+            get(get_post).patch(update_post).delete(delete_post),
+        )
 }
