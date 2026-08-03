@@ -4,7 +4,9 @@ version = "0.2.1"
 edition = "2024"
 
 [dependencies]
+# Async-await support
 async-trait = "0.1"
+
 # Web framework
 axum = "0.8"
 
@@ -26,6 +28,13 @@ thiserror = "2"
 
 # Async runtime
 tokio = { version = "1", features = ["macros", "parking_lot", "rt-multi-thread"] }
+
+# Middleware for tower-http
+tower-http = { version = "0.7", features = ["trace"] }
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 # Swagger
 utoipa = {version = "5", features = ["chrono"] }

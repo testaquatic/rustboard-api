@@ -9,11 +9,22 @@ use rustboard_api::{
     swagger::get_swagger_router,
 };
 use sqlx::postgres::PgPoolOptions;
+use tower_http::trace::TraceLayer;
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 설정을 읽는다
     let configuration = Arc::new(get_configuration()?);
+
+    // 로깅
+    tracing_subscriber::registry()
+        .with(
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| "rustboard_api=debug,tower_http=debug".into()),
+        )
+        .with(tracing_subscriber::fmt::layer())
+        .init();
 
     // DB 풀 만들기
     let pool = PgPoolOptions::new()
@@ -43,14 +54,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 라우터를 만들고 상태 붙이기
     let app = app_routes()
         .with_state(state.clone())
-        .merge(get_swagger_router(state));
+        .merge(get_swagger_router(state))
+        .layer(TraceLayer::new_for_http());
 
     // 서버 실행
     let listener = tokio::net::TcpListener::bind(configuration.bind_addr).await?;
-    println!(
+    tracing::info!(
         "{} listening on http://{}",
         configuration.service_name,
-        listener.local_addr()?,
+        listener.local_addr()?
     );
     axum::serve(listener, app).await?;
 
