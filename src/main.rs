@@ -3,7 +3,10 @@ use std::{net::SocketAddr, sync::Arc, time::Duration};
 use axum::http::StatusCode;
 use rustboard_api::{
     configuration::get_configuration,
-    middleware::request_id::AddRequestIdLayer,
+    middleware::{
+        rate_limit_error::rate_limit_error_response, rate_limit_key::ForwardedIpKeyExtractor,
+        request_id::AddRequestIdLayer,
+    },
     repository::{comment::PostgresCommentRepository, post::PostgresPostRepository},
     router::app_routes,
     service::{comment::CommentService, post::PostService},
@@ -59,10 +62,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let governor_conf = GovernorConfigBuilder::default()
         .per_second(10)
         .burst_size(30)
+        .key_extractor(ForwardedIpKeyExtractor)
         .finish()
         .unwrap();
 
-    let governor_layer = GovernorLayer::new(governor_conf);
+    let governor_layer = GovernorLayer::new(governor_conf).error_handler(rate_limit_error_response);
 
     // 라우터를 만들고 상태 붙이기
     let app = app_routes()
