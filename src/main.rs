@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use rustboard_api::{
     configuration::get_configuration,
+    middleware::request_id::AddRequestIdLayer,
     repository::{comment::PostgresCommentRepository, post::PostgresPostRepository},
     router::app_routes,
     service::{comment::CommentService, post::PostService},
@@ -55,7 +56,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let app = app_routes()
         .with_state(state.clone())
         .merge(get_swagger_router(state))
-        .layer(TraceLayer::new_for_http());
+        .layer(TraceLayer::new_for_http())
+        .layer(AddRequestIdLayer);
 
     // 서버 실행
     let listener = tokio::net::TcpListener::bind(configuration.bind_addr).await?;
