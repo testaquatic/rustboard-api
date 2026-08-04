@@ -1,5 +1,6 @@
-use std::sync::Arc;
+use std::{net::SocketAddr, sync::Arc, time::Duration};
 
+use axum::http::StatusCode;
 use rustboard_api::{
     configuration::get_configuration,
     middleware::request_id::AddRequestIdLayer,
@@ -10,7 +11,10 @@ use rustboard_api::{
     swagger::get_swagger_router,
 };
 use sqlx::postgres::PgPoolOptions;
-use tower_http::trace::TraceLayer;
+use tower_governor::{GovernorLayer, governor::GovernorConfigBuilder};
+use tower_http::{
+    compression::CompressionLayer, cors::CorsLayer, timeout::TimeoutLayer, trace::TraceLayer,
+};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 #[tokio::main]
@@ -52,10 +56,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         pool,
     };
 
+    let governor_conf = GovernorConfigBuilder::default()
+        .per_second(10)
+        .burst_size(30)
+        .finish()
+        .unwrap();
+
+    let governor_layer = GovernorLayer::new(governor_conf);
+
     // 라우터를 만들고 상태 붙이기
     let app = app_routes()
         .with_state(state.clone())
         .merge(get_swagger_router(state))
+        .layer(CorsLayer::permissive())
+        .layer(CompressionLayer::new())
+        .layer(TimeoutLayer::with_status_code(
+            StatusCode::REQUEST_TIMEOUT,
+            Duration::from_secs(30),
+        ))
+        .layer(governor_layer)
         .layer(TraceLayer::new_for_http())
         .layer(AddRequestIdLayer);
 
@@ -66,7 +85,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         configuration.service_name,
         listener.local_addr()?
     );
-    axum::serve(listener, app).await?;
+    axum::serve(
+        listener,
+        app.into_make_service_with_connect_info::<SocketAddr>(),
+    )
+    .await?;
 
     Ok(())
 }

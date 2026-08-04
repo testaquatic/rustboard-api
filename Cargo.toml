@@ -28,10 +28,12 @@ thiserror = "2"
 
 # Async runtime
 tokio = { version = "1", features = ["macros", "parking_lot", "rt-multi-thread"] }
-tower = "0.5"
 
-# Middleware for tower-http
-tower-http = { version = "0.7", features = ["trace"] }
+
+# Middleware
+tower = "0.5"
+tower-http = { version = "0.7", features = ["compression-gzip", "cors", "timeout", "trace"] }
+tower_governor = "0.8"
 
 # Logging
 tracing = "0.1"
