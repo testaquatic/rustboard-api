@@ -8,19 +8,19 @@ use uuid::Uuid;
 pub struct AddRequestIdLayer;
 
 impl<S> Layer<S> for AddRequestIdLayer {
-    type Service = AddRequestId<S>;
+    type Service = AddRequestIdService<S>;
 
     fn layer(&self, inner: S) -> Self::Service {
-        AddRequestId { inner }
+        AddRequestIdService { inner }
     }
 }
 
 #[derive(Clone)]
-pub struct AddRequestId<S> {
+pub struct AddRequestIdService<S> {
     inner: S,
 }
 
-impl<S> Service<Request> for AddRequestId<S>
+impl<S> Service<Request> for AddRequestIdService<S>
 where
     S: Service<Request, Response = Response> + Send + 'static,
     S::Future: Send + 'static,
@@ -36,14 +36,15 @@ where
     ) -> std::task::Poll<Result<(), Self::Error>> {
         self.inner.poll_ready(cx)
     }
+
     fn call(&mut self, req: Request) -> Self::Future {
         let request_id = Uuid::new_v4().to_string();
+        let span = tracing::info_span!("request", request_id = %request_id);
+        let _guard = span.enter();
+
         let future = self.inner.call(req);
 
         Box::pin(async move {
-            let span = tracing::info_span!("request", request_id = %request_id);
-            let _guard = span.enter();
-
             let mut res = future.await?;
             res.headers_mut()
                 .insert("x-requeest-id", HeaderValue::from_str(&request_id).unwrap());

@@ -4,8 +4,9 @@ use axum::http::StatusCode;
 use rustboard_api::{
     configuration::get_configuration,
     middleware::{
-        rate_limit_error::rate_limit_error_response, rate_limit_key::ForwardedIpKeyExtractor,
-        request_id::AddRequestIdLayer,
+        ip_guard::IpGuardLayer, rate_limit_error::rate_limit_error_response,
+        rate_limit_key::ForwardedIpKeyExtractor, request_id::AddRequestIdLayer,
+        timing::TimingLayer,
     },
     repository::{comment::PostgresCommentRepository, post::PostgresPostRepository},
     router::app_routes,
@@ -79,6 +80,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             Duration::from_secs(30),
         ))
         .layer(governor_layer)
+        .layer(IpGuardLayer)
+        .layer(TimingLayer)
         .layer(TraceLayer::new_for_http())
         .layer(AddRequestIdLayer);
 
