@@ -47,17 +47,39 @@ pub struct ErrorBody {
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         match &self {
+            // 로깅
             AppError::Internal(err) => {
-                tracing::error!(error.message = %err, error.chain = ?err, "internal server error")
+                tracing::error!(
+                    error.type = "internal",
+                    error.message = %self,
+                    error.detail = ?err,
+                    "unhandled server error"
+                )
             }
             AppError::Unauthorized | AppError::Forbidden => {
-                tracing::warn!(error = %self, "auth error")
+                tracing::warn!(
+                    error.type = "auth",
+                    error.message = %self,
+                    "authentication/authorization failure"
+                )
             }
-            _ => {
-                tracing::debug!(error = %self, "client error")
+            AppError::NotFound { .. } => {
+                tracing::debug!(
+                    error.type = "not_found",
+                    error.message = %self,
+                    "resource found error"
+                )
+            }
+            AppError::Validation(_) => {
+                tracing::debug!(
+                    error.type = "validation",
+                    error.message = %self,
+                    "input validation failure"
+                )
             }
         }
 
+        // HTTP 응답 생성
         let (status, error_code, message) = match self {
             AppError::NotFound { entity, id } => (
                 StatusCode::NOT_FOUND,
