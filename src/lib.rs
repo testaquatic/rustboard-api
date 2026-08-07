@@ -1,5 +1,6 @@
 pub mod configuration;
 pub mod domain;
+pub mod error;
 pub mod middleware;
 pub mod repository;
 pub mod router;

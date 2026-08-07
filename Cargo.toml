@@ -4,6 +4,7 @@ version = "0.2.1"
 edition = "2024"
 
 [dependencies]
+anyhow = "1"
 # Async-await support
 async-trait = "0.1"
 

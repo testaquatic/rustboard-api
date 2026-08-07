@@ -8,7 +8,8 @@ use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, OpenApi, ToSchema};
 
 use crate::{
-    domain::post::{CreatePostInput, PostResponse, ServiceError, UpdatePostInput},
+    domain::post::{CreatePostInput, PostResponse, UpdatePostInput},
+    error::{AppError, ErrorBody},
     state::AppState,
 };
 
@@ -86,7 +87,7 @@ pub struct PostListResponse {
 pub async fn list_posts(
     State(state): State<AppState>,
     query: Query<ListQuery>,
-) -> Result<Json<PostListResponse>, ServiceError> {
+) -> Result<Json<PostListResponse>, AppError> {
     let limit = query.limit.unwrap_or(DEFAULT_LIMIT).clamp(1, MAX_LIMIT);
     let cursor = query.cursor.as_ref().and_then(|s| parse_cursor(s));
     let posts = state.post_service.list_recent(cursor, limit).await?;
@@ -110,14 +111,19 @@ pub async fn list_posts(
     ),
     responses(
         (status = StatusCode::OK, description = "성공적으로 게시글을 반환", body = PostResponse),
-        (status = StatusCode::NOT_FOUND, description = "게시글을 찾을 수 없음", body = ServiceError, example = json!({"message": ServiceError::NotFound(1).to_string()}))
+        (
+            status = StatusCode::NOT_FOUND,
+            description = "게시글을 찾을 수 없음",
+            body = ErrorBody,
+            example = json!({"error": "not_found", "message": "post(id=1)를 찾을 수 없습니다"})
+        )
     ),
     tags = ["posts"]
 )]
 pub async fn get_post(
     State(state): State<AppState>,
     Path(id): Path<i64>,
-) -> Result<Json<PostResponse>, ServiceError> {
+) -> Result<Json<PostResponse>, AppError> {
     let post = state.post_service.get_by_id(id).await?;
 
     Ok(Json(PostResponse::from(post)))
@@ -130,14 +136,18 @@ pub async fn get_post(
     request_body = CreatePostInput,
     responses(
         (status = StatusCode::CREATED, description = "글 생성 성공", body = PostResponse),
-        (status = StatusCode::BAD_REQUEST, description = "잘못된 요청", example = json!({"message": ServiceError::EmptyTitle.to_string()}))
+        (
+            status = StatusCode::UNPROCESSABLE_ENTITY, description = "제목이나 내용이 없거나 너무 긴 경우", 
+            body = ErrorBody,
+            example = json!({"error": "validation_error", "message": "제목이 비어 있습니다"})
+        )
     ),
     tags = ["posts"]
 )]
 pub async fn create_post(
     State(state): State<AppState>,
     Json(input): Json<CreatePostInput>,
-) -> Result<(StatusCode, Json<PostResponse>), ServiceError> {
+) -> Result<(StatusCode, Json<PostResponse>), AppError> {
     let post = state.post_service.create(input).await?;
 
     Ok((StatusCode::CREATED, Json(PostResponse::from(post))))
@@ -153,8 +163,14 @@ pub async fn create_post(
     request_body = UpdatePostInput,
     responses(
         (status = StatusCode::OK, description = "성공적으로 게시글을 수정", body = PostResponse),
-        (status = StatusCode::NOT_FOUND, description = "게시글을 찾을 수 없음", body = ServiceError, example = json!({"message": ServiceError::NotFound(1).to_string()})),
-        (status = StatusCode::BAD_REQUEST, description = "잘못된 요청", example = json!({"message": ServiceError::EmptyTitle.to_string()}))
+        (
+            status = StatusCode::NOT_FOUND, description = "게시글을 찾을 수 없음", 
+            body = ErrorBody, example = json!({"error": "not_found", "message": "post(id=1)를 찾을 수 없습니다"})
+        ),
+        (
+            status = StatusCode::UNPROCESSABLE_ENTITY, description = "제목이나 내용이 없거나 너무 긴 경우",
+            body = ErrorBody, example = json!({"error": "validation_error", "message": "제목이 비어 있습니다"})
+        )
     ),
     tags = ["posts"]
 )]
@@ -162,7 +178,7 @@ pub async fn update_post(
     State(state): State<AppState>,
     Path(id): Path<i64>,
     Json(input): Json<UpdatePostInput>,
-) -> Result<Json<PostResponse>, ServiceError> {
+) -> Result<Json<PostResponse>, AppError> {
     let post = state.post_service.update(id, input).await?;
 
     Ok(Json(PostResponse::from(post)))
@@ -178,8 +194,8 @@ pub async fn update_post(
     responses(
         (status = StatusCode::NO_CONTENT, description = "성공적으로 게시글을 삭제"),
         (
-            status = StatusCode::NOT_FOUND, description = "게시글을 찾을 수 없음", body = ServiceError, 
-            example = json!({"message": ServiceError::NotFound(1).to_string()})
+            status = StatusCode::NOT_FOUND, description = "게시글을 찾을 수 없음", body = ErrorBody, 
+            example = json!({"error": "not_found", "message": "post(id=1)를 찾을 수 없습니다"})
         ),
     ),
     tags = ["posts"]
@@ -187,7 +203,7 @@ pub async fn update_post(
 pub async fn delete_post(
     State(state): State<AppState>,
     Path(id): Path<i64>,
-) -> Result<StatusCode, ServiceError> {
+) -> Result<StatusCode, AppError> {
     state.post_service.delete(id).await?;
 
     Ok(StatusCode::NO_CONTENT)
@@ -197,6 +213,6 @@ pub async fn delete_post(
 #[openapi(
     paths(list_posts, get_post, create_post, update_post, delete_post),
     tags((name = "posts", description = "게시글 API")),
-    components(schemas(CreatePostInput, UpdatePostInput, ServiceError, PostResponse))
+    components(schemas(CreatePostInput, UpdatePostInput, AppError, ErrorBody, PostResponse))
 )]
 pub struct PostOpenApiDoc;

@@ -3,15 +3,11 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use sqlx::{PgPool, query_as};
-use thiserror::Error;
 
-use crate::domain::post::{CreatePostInput, Post, UpdatePostInput};
-
-#[derive(Error, Debug)]
-pub enum RepositoryError {
-    #[error("저장소 오류")]
-    Backend,
-}
+use crate::{
+    domain::post::{CreatePostInput, Post, UpdatePostInput},
+    repository::error::RepositoryError,
+};
 
 #[async_trait]
 pub trait PostRepository {
@@ -56,8 +52,7 @@ impl PostRepository for PostgresPostRepository {
             input.body,
         )
         .fetch_one(&self.pool)
-        .await
-        .map_err(|_| RepositoryError::Backend)?;
+        .await?;
 
         Ok(row)
     }
@@ -73,8 +68,7 @@ impl PostRepository for PostgresPostRepository {
             id
         )
         .fetch_optional(&self.pool)
-        .await
-        .map_err(|_| RepositoryError::Backend)?;
+        .await?;
 
         Ok(row)
     }
@@ -117,9 +111,9 @@ impl PostRepository for PostgresPostRepository {
                 .fetch_all(&self.pool)
                 .await
             }
-        };
+        }?;
 
-        rows.map_err(|_| RepositoryError::Backend)
+        Ok(rows)
     }
 
     async fn update(
@@ -142,8 +136,7 @@ impl PostRepository for PostgresPostRepository {
             input.body,
         )
         .fetch_optional(&self.pool)
-        .await
-        .map_err(|_| RepositoryError::Backend)?;
+        .await?;
 
         Ok(row)
     }
@@ -157,8 +150,7 @@ impl PostRepository for PostgresPostRepository {
             id
         )
         .execute(&self.pool)
-        .await
-        .map_err(|_| RepositoryError::Backend)?;
+        .await?;
 
         Ok(result.rows_affected() == 1)
     }

@@ -1,0 +1,15 @@
+use thiserror::Error;
+
+use crate::repository::error::RepositoryError;
+
+#[derive(Debug, Error)]
+pub enum ServiceError {
+    #[error("리포지토리 오류")]
+    Repo(#[from] RepositoryError),
+
+    #[error("입력값 검증 실패: {0}")]
+    Validation(String),
+
+    #[error("{entity}(id={id})을 찾을 수 없습니다")]
+    NotFound { entity: &'static str, id: i64 },
+}

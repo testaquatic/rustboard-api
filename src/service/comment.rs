@@ -1,9 +1,7 @@
 use crate::{
-    domain::{
-        comment::{Comment, CreateCommentInput},
-        post::ServiceError,
-    },
+    domain::comment::{Comment, CreateCommentInput},
     repository::{comment::DynCommentRepository, post::DynPostRepository},
+    service::error::ServiceError,
 };
 
 pub struct CommentService {
@@ -25,29 +23,26 @@ impl CommentService {
         input: CreateCommentInput,
     ) -> Result<Comment, ServiceError> {
         if input.body.trim().is_empty() {
-            return Err(ServiceError::EmptyTitle);
+            return Err(ServiceError::Validation("댓글이 비어 있습니다".to_string()));
         }
 
         // 부모 게시글이 존재하는지 확인한다.
-        let parent = self
-            .posts_repo
-            .find_by_id(post_id)
-            .await
-            .map_err(|_| ServiceError::Internal)?;
+        let parent = self.posts_repo.find_by_id(post_id).await?;
         if parent.is_none() {
-            return Err(ServiceError::NotFound(post_id));
+            return Err(ServiceError::NotFound {
+                entity: "comment",
+                id: post_id,
+            });
         }
 
-        self.comments_repo
-            .insert(post_id, input)
-            .await
-            .map_err(|_| ServiceError::Internal)
+        let comment = self.comments_repo.insert(post_id, input).await?;
+
+        Ok(comment)
     }
 
     pub async fn list_by_post(&self, post_id: i64) -> Result<Vec<Comment>, ServiceError> {
-        self.comments_repo
-            .list_by_post(post_id)
-            .await
-            .map_err(|_| ServiceError::Internal)
+        let comments = self.comments_repo.list_by_post(post_id).await?;
+
+        Ok(comments)
     }
 }

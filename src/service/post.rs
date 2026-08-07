@@ -1,8 +1,9 @@
 use chrono::{DateTime, Utc};
 
 use crate::{
-    domain::post::{CreatePostInput, Post, ServiceError, UpdatePostInput},
+    domain::post::{CreatePostInput, Post, UpdatePostInput},
     repository::post::DynPostRepository,
+    service::error::ServiceError,
 };
 
 const TITLE_MAX: usize = 200;
@@ -20,13 +21,19 @@ impl PostService {
     pub async fn create(&self, input: CreatePostInput) -> Result<Post, ServiceError> {
         let title = input.title.trim();
         if title.is_empty() {
-            return Err(ServiceError::EmptyTitle);
+            return Err(ServiceError::Validation("제목이 비어 있습니다".to_string()));
         }
         if title.chars().count() > TITLE_MAX {
-            return Err(ServiceError::TitleTooLong(TITLE_MAX));
+            return Err(ServiceError::Validation(format!(
+                "제목이 {}자를 초과했습니다",
+                TITLE_MAX
+            )));
         }
         if input.body.chars().count() > BODY_MAX {
-            return Err(ServiceError::BodyTooLong(BODY_MAX));
+            return Err(ServiceError::Validation(format!(
+                "본문이 {}자를 초과했습니다",
+                BODY_MAX
+            )));
         }
 
         let clean = CreatePostInput {
@@ -34,18 +41,14 @@ impl PostService {
             body: input.body,
         };
 
-        self.repo
-            .insert(clean)
-            .await
-            .map_err(|_| ServiceError::Internal)
+        Ok(self.repo.insert(clean).await?)
     }
 
     pub async fn get_by_id(&self, id: i64) -> Result<Post, ServiceError> {
         self.repo
             .find_by_id(id)
-            .await
-            .map_err(|_| ServiceError::Internal)?
-            .ok_or(ServiceError::NotFound(id))
+            .await?
+            .ok_or(ServiceError::NotFound { entity: "post", id })
     }
 
     pub async fn list_recent(
@@ -53,46 +56,53 @@ impl PostService {
         cursor: Option<(DateTime<Utc>, i64)>,
         limit: i32,
     ) -> Result<Vec<Post>, ServiceError> {
-        self.repo
-            .list(cursor, limit)
-            .await
-            .map_err(|_| ServiceError::Internal)
+        let posts = self.repo.list(cursor, limit).await?;
+
+        Ok(posts)
     }
 
     pub async fn update(&self, id: i64, input: UpdatePostInput) -> Result<Post, ServiceError> {
         if input.title.is_none() && input.body.is_none() {
-            return Err(ServiceError::EmptyTitle);
+            return Err(ServiceError::Validation(
+                "수정할 내용이 없습니다".to_string(),
+            ));
         }
         if let Some(title) = &input.title {
             let trimmed = title.trim();
             if trimmed.is_empty() {
-                return Err(ServiceError::EmptyTitle);
+                return Err(ServiceError::Validation("제목이 비어 있습니다".to_string()));
             }
             if trimmed.chars().count() > TITLE_MAX {
-                return Err(ServiceError::TitleTooLong(TITLE_MAX));
+                return Err(ServiceError::Validation(format!(
+                    "제목이 {}자를 초과했습니다",
+                    TITLE_MAX
+                )));
             }
         }
         if let Some(body) = &input.body
             && body.chars().count() > BODY_MAX
         {
-            return Err(ServiceError::BodyTooLong(BODY_MAX));
+            return Err(ServiceError::Validation(format!(
+                "본문이 {}자를 초과했습니다",
+                BODY_MAX
+            )));
         }
 
+        let clean = UpdatePostInput {
+            title: input.title,
+            body: input.body,
+        };
+
         self.repo
-            .update(id, input)
-            .await
-            .map_err(|_| ServiceError::Internal)?
-            .ok_or(ServiceError::NotFound(id))
+            .update(id, clean)
+            .await?
+            .ok_or(ServiceError::NotFound { entity: "post", id })
     }
 
     pub async fn delete(&self, id: i64) -> Result<(), ServiceError> {
-        let removed = self
-            .repo
-            .delete(id)
-            .await
-            .map_err(|_| ServiceError::Internal)?;
+        let removed = self.repo.delete(id).await?;
         if !removed {
-            return Err(ServiceError::NotFound(id));
+            return Err(ServiceError::NotFound { entity: "post", id });
         }
 
         Ok(())
@@ -135,7 +145,7 @@ mod tests {
             })
             .await;
 
-        assert!(matches!(result, Err(ServiceError::EmptyTitle)));
+        assert!(matches!(result, Err(ServiceError::Validation(_))));
     }
 
     #[tokio::test]

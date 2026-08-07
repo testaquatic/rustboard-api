@@ -5,7 +5,7 @@ use sqlx::PgPool;
 
 use crate::{
     domain::comment::{Comment, CreateCommentInput},
-    repository::post::RepositoryError,
+    repository::error::RepositoryError,
 };
 
 #[async_trait]
@@ -51,8 +51,7 @@ impl CommentRepository for PostgresCommentRepository {
             input.body,
         )
         .fetch_one(&self.pool)
-        .await
-        .map_err(|_| RepositoryError::Backend)?;
+        .await?;
 
         Ok(row)
     }
@@ -69,8 +68,7 @@ impl CommentRepository for PostgresCommentRepository {
             post_id
         )
         .fetch_all(&self.pool)
-        .await
-        .map_err(|_| RepositoryError::Backend)?;
+        .await?;
 
         Ok(rows)
     }
@@ -86,8 +84,7 @@ impl CommentRepository for PostgresCommentRepository {
             id
         )
         .fetch_optional(&self.pool)
-        .await
-        .map_err(|_| RepositoryError::Backend)?;
+        .await?;
 
         Ok(row)
     }
