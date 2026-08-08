@@ -8,9 +8,12 @@ use rustboard_api::{
         rate_limit_key::ForwardedIpKeyExtractor, request_id::AddRequestIdLayer,
         timing::TimingLayer,
     },
-    repository::{comment::PostgresCommentRepository, post::PostgresPostRepository},
+    repository::{
+        comment::PostgresCommentRepository, post::PostgresPostRepository,
+        user::PostgresUserRepository,
+    },
     router::app_routes,
-    service::{comment::CommentService, post::PostService},
+    service::{comment::CommentService, post::PostService, user::UserService},
     state::AppState,
     swagger::get_swagger_router,
 };
@@ -47,10 +50,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 리포지토리 초기화
     let posts_repo = Arc::new(PostgresPostRepository::new(pool.clone()));
     let comments_repo = Arc::new(PostgresCommentRepository::new(pool.clone()));
+    let users_repo = Arc::new(PostgresUserRepository::new(pool.clone()));
 
     // 서비스에 리포지토리 주입
     let post_service = Arc::new(PostService::new(posts_repo.clone()));
     let comment_service = Arc::new(CommentService::new(posts_repo, comments_repo));
+    let user_service = Arc::new(UserService::new(users_repo));
 
     // AppState에 담기
     let state = AppState {
@@ -58,6 +63,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         comment_service,
         configuration: configuration.clone(),
         pool,
+        user_service,
     };
 
     let governor_conf = GovernorConfigBuilder::default()

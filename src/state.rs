@@ -4,7 +4,7 @@ use sqlx::PgPool;
 
 use crate::{
     configuration::Settings,
-    service::{comment::CommentService, post::PostService},
+    service::{comment::CommentService, post::PostService, user::UserService},
 };
 
 /// AppState 정의
@@ -14,4 +14,5 @@ pub struct AppState {
     pub pool: PgPool,
     pub post_service: Arc<PostService>,
     pub comment_service: Arc<CommentService>,
+    pub user_service: Arc<UserService>,
 }
