@@ -16,6 +16,7 @@ chrono = { version = "0.4", features = ["serde"] }
 
 # configuration
 config = "0.15"
+regex = "1"
 
 # Serialization
 serde = { version = "1", features = ["derive"] }

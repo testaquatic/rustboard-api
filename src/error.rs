@@ -28,6 +28,19 @@ pub enum AppError {
     Internal(#[source] anyhow::Error),
 }
 
+impl AppError {
+    /// internal 에러의 로그용 안전한 요약을 생성
+    fn safe_log_message(&self) -> String {
+        match self {
+            AppError::Internal(err) => {
+                let msg = format!("{err:?}");
+                make_sensitive(&msg)
+            }
+            other => other.to_string(),
+        }
+    }
+}
+
 impl From<ServiceError> for AppError {
     fn from(err: ServiceError) -> Self {
         match err {
@@ -48,11 +61,16 @@ impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         match &self {
             // 로깅
-            AppError::Internal(err) => {
+            AppError::Internal(_) => {
+                let safe_msg = if should_mask() {
+                    self.safe_log_message()
+                } else {
+                    format!("{:?}", self)
+                };
                 tracing::error!(
                     error.type = "internal",
                     error.message = %self,
-                    error.detail = ?err,
+                    error.detail = %safe_msg,
                     "unhandled server error"
                 )
             }
@@ -113,4 +131,35 @@ impl IntoResponse for AppError {
 
         (status, Json(body)).into_response()
     }
+}
+
+/// 알려진 패턴을 마스킹한다.
+fn make_sensitive(input: &str) -> String {
+    let mut result = input.to_string();
+
+    // DB 접속 패턴
+    let db_url_re = regex::Regex::new(r"postgres://[^@]+@[^\s/]+").unwrap();
+    result = db_url_re
+        .replace_all(&result, "postgres://***@***")
+        .to_string();
+
+    // IP:포트 패턴
+    // IP:포트 패턴 (내부망)
+    let ip_re = regex::Regex::new(
+        r"\b(?:10\.\d{1,3}|172\.(?:1[6-9]|2\d|3[01])|192\.168)\.\d{1,3}\.\d{1,3}(?::\d+)?\b",
+    )
+    .unwrap();
+    result = ip_re.replace_all(&result, "[MASKED_IP]").to_string();
+
+    // 이메일 패턴
+    let email_re = regex::Regex::new(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}").unwrap();
+    result = email_re.replace_all(&result, "[EMAIL_ADDRESS]").to_string();
+
+    result
+}
+
+fn should_mask() -> bool {
+    std::env::var("RUST_ENV")
+        .map(|v| v != "development" && v != "test")
+        .unwrap_or(true)
 }
