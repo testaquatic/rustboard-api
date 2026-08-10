@@ -12,4 +12,7 @@ pub enum ServiceError {
 
     #[error("{entity}(id={id})을 찾을 수 없습니다")]
     NotFound { entity: &'static str, id: i64 },
+
+    #[error("비밀번호 처리 오류")]
+    PasswordHash(String),
 }

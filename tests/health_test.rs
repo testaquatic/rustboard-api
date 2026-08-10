@@ -3,9 +3,12 @@ use std::sync::Arc;
 use axum::http::Request;
 use rustboard_api::{
     configuration::get_configuration,
-    repository::{comment::PostgresCommentRepository, post::PostgresPostRepository},
+    repository::{
+        comment::PostgresCommentRepository, post::PostgresPostRepository,
+        user::PostgresUserRepository,
+    },
     router::app_routes,
-    service::{comment::CommentService, post::PostService},
+    service::{comment::CommentService, post::PostService, user::UserService},
     state::AppState,
 };
 use sqlx::postgres::PgPoolOptions;
@@ -24,10 +27,12 @@ async fn health_returns_200_without_db() {
 
     let posts_repo = Arc::new(PostgresPostRepository::new(pool.clone()));
     let comments_repo = Arc::new(PostgresCommentRepository::new(pool.clone()));
+    let users_repo = Arc::new(PostgresUserRepository::new(pool.clone()));
 
     let state = AppState {
         post_service: Arc::new(PostService::new(posts_repo.clone())),
         comment_service: Arc::new(CommentService::new(posts_repo, comments_repo)),
+        user_service: Arc::new(UserService::new(users_repo)),
         pool,
         configuration,
     };

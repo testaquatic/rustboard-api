@@ -47,6 +47,7 @@ impl From<ServiceError> for AppError {
             ServiceError::NotFound { entity, id } => AppError::NotFound { entity, id },
             ServiceError::Validation(msg) => AppError::Validation(msg),
             ServiceError::Repo(repo_err) => AppError::Internal(repo_err.into()),
+            ServiceError::PasswordHash(msg) => AppError::Internal(anyhow::anyhow!(msg)),
         }
     }
 }

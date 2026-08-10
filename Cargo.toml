@@ -4,7 +4,11 @@ version = "0.2.1"
 edition = "2024"
 
 [dependencies]
+# 오류
 anyhow = "1"
+
+# ARGON2 해싱
+argon2 = "0.5"
 # Async-await support
 async-trait = "0.1"
 
@@ -16,6 +20,11 @@ chrono = { version = "0.4", features = ["serde"] }
 
 # configuration
 config = "0.15"
+
+# 해싱
+password-hash = { version = "0.6", features = ["getrandom"] }
+
+# 정규 표현식
 regex = "1"
 
 # Serialization
@@ -45,6 +54,8 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 utoipa = {version = "5", features = ["chrono"] }
 utoipa-axum = "0.2"
 utoipa-swagger-ui = { version = "9", features = ["axum"] }
+
+# UUID
 uuid = { version = "1", features = ["v4"] }
 
 [dev-dependencies]

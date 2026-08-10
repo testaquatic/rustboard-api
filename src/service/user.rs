@@ -1,4 +1,5 @@
 use crate::{
+    auth::password,
     domain::user::{SignupInput, User},
     repository::user::DynUserRepository,
     service::error::ServiceError,
@@ -22,7 +23,10 @@ impl UserService {
         }
 
         // 패스워드 해싱
-        let password_hash = "placeholder".to_string();
+        let password_hash = password::hash_password(&input.password)
+            .map_err(|e| ServiceError::PasswordHash(e.to_string()))?;
+
+        // DB에 저장
         let user = self
             .repo
             .insert(&input.email, &password_hash, &input.display_name)

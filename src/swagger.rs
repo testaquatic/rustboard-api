@@ -5,7 +5,10 @@ use utoipa::{
 use utoipa_swagger_ui::SwaggerUi;
 
 use crate::{
-    routes::{comment::CommentOpenApiDoc, meta::MetaOpenApiDoc, post::PostOpenApiDoc},
+    routes::{
+        auth::AuthOpenApiDoc, comment::CommentOpenApiDoc, meta::MetaOpenApiDoc,
+        post::PostOpenApiDoc,
+    },
     state::AppState,
 };
 
@@ -28,6 +31,7 @@ pub fn get_swagger_router(app_state: AppState) -> axum::Router {
     api.merge(MetaOpenApiDoc::openapi());
     api.merge(PostOpenApiDoc::openapi());
     api.merge(CommentOpenApiDoc::openapi());
+    api.merge(AuthOpenApiDoc::openapi());
 
     SwaggerUi::new("/swagger-ui")
         .url("/api-docs/openapi.json", api)
