@@ -5,7 +5,7 @@ use axum::{
 
 use crate::{
     routes::{
-        auth::signup,
+        auth::{login, signup},
         comment::{create_comment, list_comments},
         meta::{health, version},
         post::{create_post, delete_post, get_post, list_posts, update_post},
@@ -44,5 +44,7 @@ pub fn comments_routes() -> Router<AppState> {
 }
 
 pub fn auth_routes() -> Router<AppState> {
-    Router::new().route("/signup", post(signup))
+    Router::new()
+        .route("/signup", post(signup))
+        .route("/login", post(login))
 }

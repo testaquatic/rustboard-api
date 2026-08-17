@@ -10,6 +10,8 @@ pub struct Settings {
     pub bind_addr: SocketAddr,
     pub service_name: String,
     pub database_url: String,
+    pub jwt_secret: String,
+    pub jwt_expiration_minutes: i64,
 }
 
 #[derive(Error, Debug)]

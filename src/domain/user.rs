@@ -39,3 +39,15 @@ impl From<User> for UserResponse {
         }
     }
 }
+
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct LoginInput {
+    pub email: String,
+    pub password: String,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct TokenResponse {
+    pub token: String,
+    pub token_type: String,
+}
