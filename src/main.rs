@@ -1,17 +1,17 @@
 use std::{net::SocketAddr, sync::Arc, time::Duration};
 
-use axum::http::StatusCode;
+use axum::{Router, http::StatusCode, middleware};
 use rustboard_api::{
     configuration::get_configuration,
     middleware::{
-        ip_guard::IpGuardLayer, rate_limit_error::rate_limit_error_response,
+        auth::require_auth, ip_guard::IpGuardLayer, rate_limit_error::rate_limit_error_response,
         rate_limit_key::ForwardedIpKeyExtractor, request_id::AddRequestIdLayer,
     },
     repository::{
         comment::PostgresCommentRepository, post::PostgresPostRepository,
         user::PostgresUserRepository,
     },
-    router::app_routes,
+    router::{protected_routes, public_routes},
     service::{comment::CommentService, post::PostService, user::UserService},
     state::AppState,
     swagger::get_swagger_router,
@@ -75,9 +75,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let governor_layer = GovernorLayer::new(governor_conf).error_handler(rate_limit_error_response);
 
     // 라우터를 만들고 상태 붙이기
-    let app = app_routes()
+    let app = Router::new()
+        .merge(public_routes())
+        .merge(
+            protected_routes()
+                .route_layer(middleware::from_fn_with_state(state.clone(), require_auth)),
+        )
         .with_state(state.clone())
         .merge(get_swagger_router(state))
+        // 모든 라우트에 적용
         .layer(CorsLayer::permissive())
         .layer(CompressionLayer::new())
         .layer(TimeoutLayer::with_status_code(

@@ -107,7 +107,7 @@ pub async fn me(auth_user: AuthUser) -> Json<serde_json::Value> {
     Json(serde_json::json!({
         "user_id": auth_user.user_id,
         "email": auth_user.email,
-        "role": auth_user.role,
+        "role": auth_user.role.to_string(),
     }))
 }
 

@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, OpenApi, ToSchema};
 
 use crate::{
+    auth::extractor::OptionalAuthUser,
     domain::post::{CreatePostInput, PostResponse, UpdatePostInput},
     error::{AppError, ErrorBody},
     state::AppState,
@@ -86,11 +87,17 @@ pub struct PostListResponse {
 )]
 pub async fn list_posts(
     State(state): State<AppState>,
+    optional_auth: OptionalAuthUser,
     query: Query<ListQuery>,
 ) -> Result<Json<PostListResponse>, AppError> {
     let limit = query.limit.unwrap_or(DEFAULT_LIMIT).clamp(1, MAX_LIMIT);
     let cursor = query.cursor.as_ref().and_then(|s| parse_cursor(s));
     let posts = state.post_service.list_recent(cursor, limit).await?;
+
+    // 로그인한 사용자라면 "내 글 표시 가능"
+    if let Some(auth_user) = &optional_auth.0 {
+        tracing::info!(user_id = auth_user.user_id, "인증된 사용자의 목록 조회");
+    }
 
     let next_cursor = posts.last().map(|p| format_cursor(p.created_at, p.id));
     let items = posts

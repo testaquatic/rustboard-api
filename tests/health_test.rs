@@ -1,13 +1,13 @@
 use std::sync::Arc;
 
-use axum::http::Request;
+use axum::{Router, http::Request, routing::get};
 use rustboard_api::{
     configuration::get_configuration,
     repository::{
         comment::PostgresCommentRepository, post::PostgresPostRepository,
         user::PostgresUserRepository,
     },
-    router::app_routes,
+    routes::meta::health,
     service::{comment::CommentService, post::PostService, user::UserService},
     state::AppState,
 };
@@ -37,7 +37,9 @@ async fn health_returns_200_without_db() {
         configuration,
     };
 
-    let app = app_routes().with_state(state);
+    let app = Router::new()
+        .route("/health", get(health))
+        .with_state(state);
     let response = app
         .oneshot(Request::get("/health").body(String::new()).unwrap())
         .await
