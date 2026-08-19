@@ -6,6 +6,7 @@ use axum::{
 use utoipa::OpenApi;
 
 use crate::{
+    auth::extractor::AuthUser,
     domain::comment::{CommentResponse, CreateCommentInput},
     error::{AppError, ErrorBody},
     state::AppState,
@@ -37,11 +38,15 @@ use crate::{
     tags = ["comments"]
 )]
 pub async fn create_comment(
-    State(state): State<AppState>,
+    auth_user: AuthUser,
     Path(post_id): Path<i64>,
+    State(state): State<AppState>,
     Json(input): Json<CreateCommentInput>,
 ) -> Result<(StatusCode, Json<CommentResponse>), AppError> {
-    let comment = state.comment_service.create(post_id, input).await?;
+    let comment = state
+        .comment_service
+        .create(post_id, input, auth_user.user_id)
+        .await?;
 
     Ok((StatusCode::CREATED, Json(CommentResponse::from(comment))))
 }

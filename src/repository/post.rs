@@ -5,13 +5,14 @@ use chrono::{DateTime, Utc};
 use sqlx::{PgPool, query_as};
 
 use crate::{
-    domain::post::{CreatePostInput, Post, UpdatePostInput},
+    domain::post::{CreatePostInput, Post},
     repository::error::RepositoryError,
 };
 
 #[async_trait]
 pub trait PostRepository {
-    async fn insert(&self, input: CreatePostInput) -> Result<Post, RepositoryError>;
+    async fn insert(&self, input: CreatePostInput, author_id: i64)
+    -> Result<Post, RepositoryError>;
     async fn find_by_id(&self, id: i64) -> Result<Option<Post>, RepositoryError>;
     async fn list(
         &self,
@@ -21,7 +22,8 @@ pub trait PostRepository {
     async fn update(
         &self,
         id: i64,
-        input: UpdatePostInput,
+        title: Option<&str>,
+        body: Option<&str>,
     ) -> Result<Option<Post>, RepositoryError>;
     async fn delete(&self, id: i64) -> Result<bool, RepositoryError>;
 }
@@ -40,16 +42,21 @@ impl PostgresPostRepository {
 
 #[async_trait]
 impl PostRepository for PostgresPostRepository {
-    async fn insert(&self, input: CreatePostInput) -> Result<Post, RepositoryError> {
+    async fn insert(
+        &self,
+        input: CreatePostInput,
+        author_id: i64,
+    ) -> Result<Post, RepositoryError> {
         let row = sqlx::query_as!(
             Post,
             r#"
-            INSERT INTO posts (title, body)
-            VALUES ($1, $2)
-            RETURNING id, title, body, created_at, updated_at
+            INSERT INTO posts (title, body, author_id)
+            VALUES ($1, $2, $3)
+            RETURNING id, title, body, author_id, created_at, updated_at
             "#,
             input.title,
-            input.body,
+            input.content,
+            author_id,
         )
         .fetch_one(&self.pool)
         .await?;
@@ -61,7 +68,7 @@ impl PostRepository for PostgresPostRepository {
         let row = sqlx::query_as!(
             Post,
             r#"
-            SELECT id, title, body, created_at, updated_at
+            SELECT id, title, body, author_id, created_at, updated_at
             FROM posts
             WHERE id = $1
             "#,
@@ -83,7 +90,7 @@ impl PostRepository for PostgresPostRepository {
                 sqlx::query_as!(
                     Post,
                     r#"
-                    SELECT id, title, body, created_at, updated_at
+                    SELECT id, title, body, author_id, created_at, updated_at
                     FROM posts
                     WHERE (created_at, id) < ($1, $2)
                     ORDER BY created_at DESC, id DESC
@@ -101,7 +108,7 @@ impl PostRepository for PostgresPostRepository {
                 sqlx::query_as!(
                     Post,
                     r#"
-                    SELECT id, title, body, created_at, updated_at
+                    SELECT id, title, body, author_id, created_at, updated_at
                     FROM posts
                     ORDER BY created_at DESC, id DESC
                     LIMIT $1
@@ -119,7 +126,8 @@ impl PostRepository for PostgresPostRepository {
     async fn update(
         &self,
         id: i64,
-        input: UpdatePostInput,
+        title: Option<&str>,
+        body: Option<&str>,
     ) -> Result<Option<Post>, RepositoryError> {
         let row = query_as!(
             Post,
@@ -129,11 +137,11 @@ impl PostRepository for PostgresPostRepository {
                 body = COALESCE($3, body),
                 updated_at = NOW()
             WHERE id = $1
-            RETURNING id, title, body, created_at, updated_at
+            RETURNING id, title, body, author_id, created_at, updated_at
             "#,
             id,
-            input.title,
-            input.body,
+            title,
+            body,
         )
         .fetch_optional(&self.pool)
         .await?;

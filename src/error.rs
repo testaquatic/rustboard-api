@@ -48,6 +48,7 @@ impl From<ServiceError> for AppError {
             ServiceError::Validation(msg) => AppError::Validation(msg),
             ServiceError::Repo(repo_err) => AppError::Internal(repo_err.into()),
             ServiceError::PasswordHash(msg) => AppError::Internal(anyhow::anyhow!(msg)),
+            ServiceError::Forbidden => AppError::Forbidden,
         }
     }
 }

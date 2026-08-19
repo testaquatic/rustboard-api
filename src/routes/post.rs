@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use utoipa::{IntoParams, OpenApi, ToSchema};
 
 use crate::{
-    auth::extractor::OptionalAuthUser,
+    auth::extractor::{AuthUser, OptionalAuthUser},
     domain::post::{CreatePostInput, PostResponse, UpdatePostInput},
     error::{AppError, ErrorBody},
     state::AppState,
@@ -67,6 +67,7 @@ pub struct PostListResponse {
                             id: 1,
                             title: "Post 1".to_string(),
                             body: "Body 1".to_string(),
+                            author_id: 1,
                             created_at: Utc::now(),
                             updated_at: Utc::now(),
                         },
@@ -74,6 +75,7 @@ pub struct PostListResponse {
                             id: 2,
                             title: "Post 2".to_string(),
                             body: "Body 2".to_string(),
+                            author_id: 2,
                             created_at: Utc::now(),
                             updated_at: Utc::now(),
                         },
@@ -152,10 +154,11 @@ pub async fn get_post(
     tags = ["posts"]
 )]
 pub async fn create_post(
+    auth_user: AuthUser,
     State(state): State<AppState>,
     Json(input): Json<CreatePostInput>,
 ) -> Result<(StatusCode, Json<PostResponse>), AppError> {
-    let post = state.post_service.create(input).await?;
+    let post = state.post_service.create(input, auth_user.user_id).await?;
 
     Ok((StatusCode::CREATED, Json(PostResponse::from(post))))
 }
@@ -182,11 +185,15 @@ pub async fn create_post(
     tags = ["posts"]
 )]
 pub async fn update_post(
-    State(state): State<AppState>,
+    auth_user: AuthUser,
     Path(id): Path<i64>,
+    State(state): State<AppState>,
     Json(input): Json<UpdatePostInput>,
 ) -> Result<Json<PostResponse>, AppError> {
-    let post = state.post_service.update(id, input).await?;
+    let post = state
+        .post_service
+        .update(id, input, auth_user.user_id, &auth_user.role)
+        .await?;
 
     Ok(Json(PostResponse::from(post)))
 }
@@ -208,10 +215,14 @@ pub async fn update_post(
     tags = ["posts"]
 )]
 pub async fn delete_post(
-    State(state): State<AppState>,
+    auth_user: AuthUser,
     Path(id): Path<i64>,
+    State(state): State<AppState>,
 ) -> Result<StatusCode, AppError> {
-    state.post_service.delete(id).await?;
+    state
+        .post_service
+        .delete(id, auth_user.user_id, &auth_user.role)
+        .await?;
 
     Ok(StatusCode::NO_CONTENT)
 }

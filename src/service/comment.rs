@@ -21,6 +21,7 @@ impl CommentService {
         &self,
         post_id: i64,
         input: CreateCommentInput,
+        _author_id: i64,
     ) -> Result<Comment, ServiceError> {
         if input.body.trim().is_empty() {
             return Err(ServiceError::Validation("댓글이 비어 있습니다".to_string()));
@@ -45,4 +46,27 @@ impl CommentService {
 
         Ok(comments)
     }
+
+    // pub async fn delete_comment(
+    //     &self,
+    //     comment_id: i64,
+    //     requester_id: i64,
+    //     requester_role: &Role,
+    // ) -> Result<(), ServiceError> {
+    //     let comment =
+    //         self.comments_repo
+    //             .find_by_id(comment_id)
+    //             .await?
+    //             .ok_or(ServiceError::NotFound {
+    //                 entity: "comment",
+    //                 id: comment_id,
+    //             })?;
+
+    //     // 본인 또는 어드민만 삭제 가능
+    //     // check_ownership(comment.author_id, requester_id, requester_role)?;
+
+    //     self.comments_repo.delete(comment_id).await?;
+
+    //     Ok(())
+    // }
 }
