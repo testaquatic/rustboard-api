@@ -1,8 +1,12 @@
 use axum::{Json, extract::State, http::StatusCode};
-use utoipa::OpenApi;
+use serde::Serialize;
+use utoipa::{
+    Modify, OpenApi,
+    openapi::security::{HttpAuthScheme, HttpBuilder, SecurityScheme},
+};
 
 use crate::{
-    auth::jwt,
+    auth::{extractor::AuthUser, jwt},
     domain::user::{LoginInput, SignupInput, TokenResponse, UserResponse},
     error::{AppError, ErrorBody},
     state::AppState,
@@ -72,10 +76,65 @@ pub async fn login(
     }))
 }
 
+#[utoipa::path(
+    description = "현재 사용자 정보 조회",
+    get,
+    path = "/me",
+    security(("AuthUser" = ["read:items"])),
+    responses(
+        (
+            status = StatusCode::OK,
+            description = "현재 사용자 정보 조회 성공",
+            body = Map<String, Value>,
+            example = json!({"user_id": 1, "email": "[EMAIL_ADDRESS]", "role": "admin"})
+        ),
+        (
+            status = StatusCode::UNAUTHORIZED,
+            description = "인증이 필요",
+            body = ErrorBody,
+            example = json!({ "error": "unauthorized", "message": "인증이 필요합니다" })
+        ),
+        (
+            status = StatusCode::INTERNAL_SERVER_ERROR,
+            description = "내부 서버 오류",
+            body = ErrorBody,
+            example = json!({ "error": "internal_error", "message":  "서버 내부 오류가 발생했습니다" })
+        )
+    ),
+    tags = ["auth"]
+)]
+pub async fn me(auth_user: AuthUser) -> Json<serde_json::Value> {
+    Json(serde_json::json!({
+        "user_id": auth_user.user_id,
+        "email": auth_user.email,
+        "role": auth_user.role,
+    }))
+}
+
+#[derive(Debug, Serialize)]
+pub struct AuthUserSecurity;
+
+impl Modify for AuthUserSecurity {
+    fn modify(&self, open_api: &mut utoipa::openapi::OpenApi) {
+        if let Some(schema) = open_api.components.as_mut() {
+            schema.add_security_scheme(
+                "AuthUser",
+                SecurityScheme::Http(
+                    HttpBuilder::new()
+                        .scheme(HttpAuthScheme::Bearer)
+                        .bearer_format("JWT")
+                        .build(),
+                ),
+            );
+        }
+    }
+}
+
 #[derive(OpenApi)]
 #[openapi(
     tags((name = "auth", description = "인증 API")),
-    paths(signup, login),
-    components(schemas(UserResponse, SignupInput, ErrorBody, AppError))
+    paths(signup, login, me),
+    components(schemas(UserResponse, SignupInput, ErrorBody, AppError)),
+    modifiers(&AuthUserSecurity),
 )]
 pub struct AuthOpenApiDoc;
