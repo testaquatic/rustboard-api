@@ -1,5 +1,10 @@
 bind_addr: "0.0.0.0:3000"
 service_name: "rustboard-api"
-database_url: "postgres://postgres:postgres@localhost:5432/rustboard"
+database:
+  username: "postgres"
+  password: "postgres"
+  database_name: "rustboard"
+  host: "localhost"
+  port: 5432
 jwt_secret: "super-secret-key-change-in-production"
 jwt_expiration_minutes: 15

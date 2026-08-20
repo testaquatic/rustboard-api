@@ -5,13 +5,31 @@ use serde::Deserialize;
 use thiserror::Error;
 
 /// 설정
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct Settings {
     pub bind_addr: SocketAddr,
     pub service_name: String,
-    pub database_url: String,
+    pub database: DatabaseSettings,
     pub jwt_secret: String,
     pub jwt_expiration_minutes: i64,
+}
+
+#[derive(Deserialize, Clone)]
+pub struct DatabaseSettings {
+    pub username: String,
+    pub password: String,
+    pub database_name: String,
+    pub host: String,
+    pub port: u16,
+}
+
+impl DatabaseSettings {
+    pub fn database_url(&self) -> String {
+        format!(
+            "postgres://{}:{}@{}:{}/{}",
+            self.username, self.password, self.host, self.port, self.database_name
+        )
+    }
 }
 
 #[derive(Error, Debug)]

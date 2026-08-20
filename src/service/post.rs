@@ -154,7 +154,7 @@ mod tests {
         // DB 풀 만들기
         let pool = PgPoolOptions::new()
             .max_connections(5)
-            .connect(&configuration.database_url)
+            .connect(&configuration.database.database_url())
             .await
             .expect("Failed to connect database");
 

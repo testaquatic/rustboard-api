@@ -1,20 +1,19 @@
 use std::{net::SocketAddr, sync::Arc, time::Duration};
 
-use axum::{Router, http::StatusCode, middleware};
+use axum::http::StatusCode;
 use rustboard_api::{
     configuration::get_configuration,
     middleware::{
-        auth::require_auth, ip_guard::IpGuardLayer, rate_limit_error::rate_limit_error_response,
+        ip_guard::IpGuardLayer, rate_limit_error::rate_limit_error_response,
         rate_limit_key::ForwardedIpKeyExtractor, request_id::AddRequestIdLayer,
     },
     repository::{
         comment::PostgresCommentRepository, post::PostgresPostRepository,
         user::PostgresUserRepository,
     },
-    router::{protected_routes, public_routes},
+    router::create_router,
     service::{comment::CommentService, post::PostService, user::UserService},
     state::AppState,
-    swagger::get_swagger_router,
 };
 use sqlx::postgres::PgPoolOptions;
 use tower_governor::{GovernorLayer, governor::GovernorConfigBuilder};
@@ -40,7 +39,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // DB 풀 만들기
     let pool = PgPoolOptions::new()
         .max_connections(5)
-        .connect(&configuration.database_url)
+        .connect(&configuration.database.database_url())
         .await?;
 
     // 앱 부팅 시 마이그레이션 자동 적용
@@ -74,15 +73,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let governor_layer = GovernorLayer::new(governor_conf).error_handler(rate_limit_error_response);
 
-    // 라우터를 만들고 상태 붙이기
-    let app = Router::new()
-        .merge(public_routes())
-        .merge(
-            protected_routes()
-                .route_layer(middleware::from_fn_with_state(state.clone(), require_auth)),
-        )
-        .with_state(state.clone())
-        .merge(get_swagger_router(state))
+    let app = create_router(state)
         // 모든 라우트에 적용
         .layer(CorsLayer::permissive())
         .layer(CompressionLayer::new())
