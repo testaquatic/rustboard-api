@@ -1,4 +1,4 @@
-use std::{net::SocketAddr, sync::Arc};
+use std::sync::Arc;
 
 use axum::{
     Router,
@@ -7,7 +7,8 @@ use axum::{
     response::Response,
 };
 use rustboard_api::{
-    configuration::{DatabaseSettings, Settings, get_configuration},
+    configuration::{DatabaseSettings, Settings},
+    domain::post::CreatePostInput,
     repository::{
         comment::PostgresCommentRepository, post::PostgresPostRepository,
         user::PostgresUserRepository,
@@ -21,9 +22,9 @@ use tower::ServiceExt;
 use uuid::Uuid;
 
 pub struct TestContext {
-    post_repo: Arc<PostgresPostRepository>,
-    user_repo: Arc<PostgresUserRepository>,
-    comment_repo: Arc<PostgresCommentRepository>,
+    _post_repo: Arc<PostgresPostRepository>,
+    _user_repo: Arc<PostgresUserRepository>,
+    _comment_repo: Arc<PostgresCommentRepository>,
     state: AppState,
 }
 
@@ -54,15 +55,84 @@ impl TestContext {
         };
 
         Self {
-            post_repo,
-            user_repo,
-            comment_repo,
+            _post_repo: post_repo,
+            _user_repo: user_repo,
+            _comment_repo: comment_repo,
             state,
         }
     }
 
     pub fn app(&self) -> Router {
         rustboard_api::router::create_router(self.state.clone())
+    }
+
+    /// 회원 가입과 로그인을 한 후 토큰을 반환한다.
+    pub async fn signup_and_login(&self) -> Option<String> {
+        // 회원가입
+        let signup_req = Request::builder()
+            .uri("/signup")
+            .method(Method::POST)
+            .header(header::CONTENT_TYPE, "application/json")
+            .body(Body::from(
+                serde_json::to_string(&json!({
+                    "email": "test@example.com",
+                    "password": "password123",
+                    "display_name": "Tester",
+                }))
+                .unwrap(),
+            ))
+            .unwrap();
+
+        let response = self.app().oneshot(signup_req).await.unwrap();
+        assert_eq!(response.status(), StatusCode::CREATED);
+
+        // 로그인
+        let login_req = Request::builder()
+            .uri("/login")
+            .method(Method::POST)
+            .header(header::CONTENT_TYPE, "application/json")
+            .body(Body::from(
+                serde_json::to_string(&json!({
+                    "email": "test@example.com",
+                    "password": "password123",
+                }))
+                .unwrap(),
+            ))
+            .unwrap();
+
+        let response = self.app().oneshot(login_req).await.unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let response = serde_json::from_slice::<Value>(&body).unwrap();
+
+        response["token"].as_str().map(String::from)
+    }
+
+    /// 글을 주입한다
+    pub async fn seed_post(&self, posts: &[CreatePostInput], token: &str) -> Vec<Response<Body>> {
+        let requests = posts.into_iter().map(|post| {
+            post_json(
+                "/posts",
+                &json!({
+                    "title": &post.title,
+                    "content": &post.content,
+                }),
+            )
+        });
+
+        let mut responses = Vec::new();
+        for request in requests {
+            let response = self
+                .app()
+                .oneshot(with_token(request, token))
+                .await
+                .unwrap();
+            responses.push(response);
+        }
+        responses
     }
 }
 
@@ -114,50 +184,6 @@ async fn create_test_db() -> Settings {
         .expect("DB 마이그레이션 실패");
 
     configuration
-}
-
-pub async fn signup_and_login(app_fn: impl Fn() -> Router) -> String {
-    // 회원가입
-    let signup_req = Request::builder()
-        .uri("/signup")
-        .method(Method::POST)
-        .header(header::CONTENT_TYPE, "application/json")
-        .body(Body::from(
-            serde_json::to_string(&json!({
-                "email": "test@example.com",
-                "password": "password123",
-                "display_name": "Tester",
-            }))
-            .unwrap(),
-        ))
-        .unwrap();
-
-    let response = app_fn().oneshot(signup_req).await.unwrap();
-    assert_eq!(response.status(), StatusCode::CREATED);
-
-    // 로그인
-    let login_req = Request::builder()
-        .uri("/login")
-        .method(Method::POST)
-        .header(header::CONTENT_TYPE, "application/json")
-        .body(Body::from(
-            serde_json::to_string(&json!({
-                "email": "test@example.com",
-                "password": "password123",
-            }))
-            .unwrap(),
-        ))
-        .unwrap();
-
-    let response = app_fn().oneshot(login_req).await.unwrap();
-    assert_eq!(response.status(), StatusCode::OK);
-
-    let body = axum::body::to_bytes(response.into_body(), usize::MAX)
-        .await
-        .unwrap();
-    let response = serde_json::from_slice::<Value>(&body).unwrap();
-
-    response["access_token"].as_str().unwrap().to_string()
 }
 
 pub fn get(uri: &str) -> Request<Body> {
