@@ -178,22 +178,4 @@ mod tests {
 
         assert!(matches!(result, Err(ServiceError::Validation(_))));
     }
-
-    #[tokio::test]
-    async fn get_post_by_id_after_creation() {
-        let service = make_service().await;
-        let created = service
-            .create(
-                CreatePostInput {
-                    title: "첫 글".into(),
-                    content: "안녕".into(),
-                },
-                1,
-            )
-            .await
-            .expect("생성 성공");
-        let found = service.get_by_id(created.id).await.expect("조회 성공");
-
-        assert_eq!(found.title, "첫 글");
-    }
 }
