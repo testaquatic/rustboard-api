@@ -232,9 +232,9 @@ pub async fn response_json(response: Response) -> serde_json::Value {
     serde_json::from_slice(&body).unwrap()
 }
 
-pub async fn response_text(response: Response) -> String {
-    let body = axum::body::to_bytes(response.into_body(), usize::MAX)
-        .await
-        .unwrap();
-    String::from_utf8(body.to_vec()).unwrap()
-}
+// pub async fn response_text(response: Response) -> String {
+//     let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+//         .await
+//         .unwrap();
+//     String::from_utf8(body.to_vec()).unwrap()
+// }
