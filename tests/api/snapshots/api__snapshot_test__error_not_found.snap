@@ -1,0 +1,8 @@
+---
+source: tests/api/snapshot_test.rs
+expression: json
+---
+{
+  "error": "not_found",
+  "message": "post(id=999999)를 찾을 수 없습니다"
+}

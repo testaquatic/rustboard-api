@@ -1,0 +1,8 @@
+---
+source: tests/api/snapshot_test.rs
+expression: json
+---
+{
+  "error": "unauthorized",
+  "message": "인증이 필요합니다"
+}

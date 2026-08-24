@@ -61,5 +61,6 @@ uuid = { version = "1", features = ["v4"] }
 
 [dev-dependencies]
 http-body-util = "0.1.5"
+insta = { version = "1", features = ["json", "redactions"]}
 tower = { version = "0.5", features = ["util"] }
 

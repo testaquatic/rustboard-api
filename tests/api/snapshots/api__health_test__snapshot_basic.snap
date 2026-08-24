@@ -1,0 +1,8 @@
+---
+source: tests/api/health_test.rs
+expression: data
+---
+{
+  "name": "rustboard",
+  "version": "1.0.0"
+}

@@ -1,0 +1,25 @@
+---
+source: tests/api/snapshot_test.rs
+expression: json
+---
+{
+  "items": [
+    {
+      "author_id": "[author_id]",
+      "body": "두 번째 글 내용",
+      "created_at": "[datetime]",
+      "id": "[id]",
+      "title": "두 번째 글",
+      "updated_at": "[datetime]"
+    },
+    {
+      "author_id": "[author_id]",
+      "body": "첫 번째 글 내용",
+      "created_at": "[datetime]",
+      "id": "[id]",
+      "title": "첫 번째 글",
+      "updated_at": "[datetime]"
+    }
+  ],
+  "next_cursor": "[next_cursor]"
+}
