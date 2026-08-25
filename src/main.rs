@@ -14,13 +14,13 @@ use rustboard_api::{
     router::create_router,
     service::{comment::CommentService, post::PostService, user::UserService},
     state::AppState,
+    telemetry,
 };
 use sqlx::postgres::PgPoolOptions;
 use tower_governor::{GovernorLayer, governor::GovernorConfigBuilder};
 use tower_http::{
     compression::CompressionLayer, cors::CorsLayer, timeout::TimeoutLayer, trace::TraceLayer,
 };
-use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -28,19 +28,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let configuration = Arc::new(get_configuration()?);
 
     // 로깅
-    tracing_subscriber::registry()
-        .with(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "rustboard_api=debug,tower_http=debug".into()),
-        )
-        .with(
-            tracing_subscriber::fmt::layer()
-                .json()
-                .with_current_span(true)
-                .with_span_list(true)
-                .flatten_event(false),
-        )
-        .init();
+    telemetry::init_subscriber();
 
     // DB 풀 만들기
     let pool = PgPoolOptions::new()

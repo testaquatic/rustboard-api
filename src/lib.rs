@@ -9,3 +9,4 @@ pub mod routes;
 pub mod service;
 pub mod state;
 pub mod swagger;
+pub mod telemetry;

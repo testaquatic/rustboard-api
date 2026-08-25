@@ -2,6 +2,7 @@ use std::pin::Pin;
 
 use axum::{extract::Request, http::HeaderValue, response::Response};
 use tower::{Layer, Service};
+use tracing::Instrument;
 use uuid::Uuid;
 
 #[derive(Clone)]
@@ -40,16 +41,18 @@ where
     fn call(&mut self, req: Request) -> Self::Future {
         let request_id = Uuid::new_v4().to_string();
         let span = tracing::info_span!("request", request_id = %request_id);
-        let _guard = span.enter();
 
         let future = self.inner.call(req);
 
-        Box::pin(async move {
-            let mut res = future.await?;
-            res.headers_mut()
-                .insert("x-requeest-id", HeaderValue::from_str(&request_id).unwrap());
+        Box::pin(
+            async move {
+                let mut res = future.await?;
+                res.headers_mut()
+                    .insert("x-requeest-id", HeaderValue::from_str(&request_id).unwrap());
 
-            Ok(res)
-        })
+                Ok(res)
+            }
+            .instrument(span),
+        )
     }
 }

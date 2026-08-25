@@ -120,6 +120,8 @@ impl PostRepository for PostgresPostRepository {
             }
         }?;
 
+        tracing::info!("게시글 조회 완료");
+
         Ok(rows)
     }
 
