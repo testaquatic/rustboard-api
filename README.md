@@ -44,6 +44,16 @@ docker start rustboard-db
 docker logs -f rustboard-db
 ```
 
+## Jaeger
+
+```bash
+docker run -d \
+  --name jaeger \
+  -p 4317:4317 \
+  -p 16686:16686 \
+  jaegertracing/all-in-one:latest
+```
+
 # API
 
 [Swagger UI](http://localhost:3000/swagger-ui/)

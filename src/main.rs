@@ -23,12 +23,12 @@ use tower_http::{
 };
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> Result<(), anyhow::Error> {
     // 설정을 읽는다
     let configuration = Arc::new(get_configuration()?);
 
     // 로깅
-    telemetry::init_subscriber();
+    let _guard = telemetry::init_telemetry()?;
 
     // DB 풀 만들기
     let pool = PgPoolOptions::new()
@@ -90,7 +90,32 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         listener,
         app.into_make_service_with_connect_info::<SocketAddr>(),
     )
+    .with_graceful_shutdown(shutdown_signal())
     .await?;
 
     Ok(())
+}
+
+async fn shutdown_signal() {
+    let ctrl_c = tokio::signal::ctrl_c();
+
+    #[cfg(unix)]
+    let terminate = async {
+        tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+            .expect("SIGTERM 시그널 핸들러 설치 실패")
+            .recv()
+            .await;
+    };
+
+    #[cfg(not(unix))]
+    let terminate = std::future::pending::<()>();
+
+    tokio::select! {
+        _ = ctrl_c => {
+            tracing::info!("Ctrl+C 수신, 종료시작")
+        }
+        _ = terminate => {
+            tracing::info!("SIGTERM 수신, 종료시작")
+        }
+    }
 }

@@ -108,7 +108,6 @@ pub async fn list_posts(
         .collect::<Vec<_>>();
     let body = PostListResponse { items, next_cursor };
 
-
     Ok(Json(body))
 }
 
