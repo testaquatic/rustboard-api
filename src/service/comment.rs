@@ -1,16 +1,20 @@
 use crate::{
     domain::comment::{Comment, CreateCommentInput},
-    repository::{comment::DynCommentRepository, post::DynPostRepository},
+    repository::{comment::CommentRepository, post::PostRepository},
     service::error::ServiceError,
 };
 
-pub struct CommentService {
-    posts_repo: DynPostRepository,
-    comments_repo: DynCommentRepository,
+pub struct CommentService<PostRepo: PostRepository, CommentRepo: CommentRepository> {
+    posts_repo: PostRepo,
+    comments_repo: CommentRepo,
 }
 
-impl CommentService {
-    pub fn new(posts_repo: DynPostRepository, comments_repo: DynCommentRepository) -> Self {
+impl<PostRepo, CommentRepo> CommentService<PostRepo, CommentRepo>
+where
+    PostRepo: PostRepository,
+    CommentRepo: CommentRepository,
+{
+    pub fn new(posts_repo: PostRepo, comments_repo: CommentRepo) -> Self {
         Self {
             posts_repo,
             comments_repo,

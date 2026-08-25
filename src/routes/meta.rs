@@ -2,7 +2,7 @@ use axum::{Json, extract::State};
 use serde::Serialize;
 use utoipa::{OpenApi, ToSchema};
 
-use crate::state::AppState;
+use crate::state::PostgresAppState;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -49,7 +49,7 @@ pub struct VersionResponse {
     ),
     tags=["meta"]
 )]
-pub async fn version(State(state): State<AppState>) -> Json<VersionResponse> {
+pub async fn version(State(state): State<PostgresAppState>) -> Json<VersionResponse> {
     Json(VersionResponse {
         service: state.configuration.service_name.clone(),
         version: VERSION,

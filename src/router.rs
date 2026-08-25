@@ -11,12 +11,12 @@ use crate::{
         meta::{health, version},
         post::{create_post, delete_post, get_post, list_posts, update_post},
     },
-    state::AppState,
+    state::PostgresAppState,
     swagger::get_swagger_router,
 };
 
 /// 인증 없이 접근 가능한 라우트
-pub fn public_routes() -> Router<AppState> {
+pub fn public_routes() -> Router<PostgresAppState> {
     Router::new()
         .route("/health", get(health))
         .route("/version", get(version))
@@ -28,7 +28,7 @@ pub fn public_routes() -> Router<AppState> {
 }
 
 /// 인증이 필수인 라우트
-pub fn protected_routes() -> Router<AppState> {
+pub fn protected_routes() -> Router<PostgresAppState> {
     Router::new()
         .route("/posts", post(create_post))
         .route("/posts/{id}", patch(update_post).delete(delete_post))
@@ -36,7 +36,7 @@ pub fn protected_routes() -> Router<AppState> {
         .route("/me", get(me))
 }
 
-pub fn create_router(state: AppState) -> Router {
+pub fn create_router(state: PostgresAppState) -> Router {
     // 라우터를 만들고 상태 붙이기
     Router::new()
         .merge(public_routes())

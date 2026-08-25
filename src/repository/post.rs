@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use sqlx::{PgPool, query_as};
@@ -28,8 +26,7 @@ pub trait PostRepository {
     async fn delete(&self, id: i64) -> Result<bool, RepositoryError>;
 }
 
-pub type DynPostRepository = Arc<dyn PostRepository + Send + Sync>;
-
+#[derive(Clone)]
 pub struct PostgresPostRepository {
     pool: PgPool,
 }
@@ -42,6 +39,7 @@ impl PostgresPostRepository {
 
 #[async_trait]
 impl PostRepository for PostgresPostRepository {
+    #[tracing::instrument(skip(self, input), fields(table = "posts"))]
     async fn insert(
         &self,
         input: CreatePostInput,
@@ -64,6 +62,7 @@ impl PostRepository for PostgresPostRepository {
         Ok(row)
     }
 
+    #[tracing::instrument(skip(self))]
     async fn find_by_id(&self, id: i64) -> Result<Option<Post>, RepositoryError> {
         let row = sqlx::query_as!(
             Post,
@@ -80,6 +79,7 @@ impl PostRepository for PostgresPostRepository {
         Ok(row)
     }
 
+    #[tracing::instrument(skip(self))]
     async fn list(
         &self,
         cursor: Option<(DateTime<Utc>, i64)>,
@@ -123,6 +123,7 @@ impl PostRepository for PostgresPostRepository {
         Ok(rows)
     }
 
+    #[tracing::instrument(skip(self, title, body))]
     async fn update(
         &self,
         id: i64,
@@ -149,6 +150,7 @@ impl PostRepository for PostgresPostRepository {
         Ok(row)
     }
 
+    #[tracing::instrument(skip(self))]
     async fn delete(&self, id: i64) -> Result<bool, RepositoryError> {
         let result = sqlx::query!(
             r#"

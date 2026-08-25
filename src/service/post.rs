@@ -5,22 +5,23 @@ use crate::{
         post::{CreatePostInput, Post, UpdatePostInput},
         role::Role,
     },
-    repository::post::DynPostRepository,
+    repository::post::PostRepository,
     service::{check_ownership, error::ServiceError},
 };
 
 const TITLE_MAX: usize = 200;
 const BODY_MAX: usize = 10_000;
 
-pub struct PostService {
-    repo: DynPostRepository,
+pub struct PostService<PostRepo: PostRepository> {
+    repo: PostRepo,
 }
 
-impl PostService {
-    pub fn new(repo: DynPostRepository) -> Self {
+impl<PostRepo: PostRepository> PostService<PostRepo> {
+    pub fn new(repo: PostRepo) -> Self {
         Self { repo }
     }
 
+    #[tracing::instrument(skip(self), fields(title = %input.title))]
     pub async fn create(
         &self,
         input: CreatePostInput,
@@ -51,6 +52,7 @@ impl PostService {
         Ok(self.repo.insert(clean, author_id).await?)
     }
 
+    #[tracing::instrument(skip(self))]
     pub async fn get_by_id(&self, id: i64) -> Result<Post, ServiceError> {
         self.repo
             .find_by_id(id)
@@ -58,6 +60,7 @@ impl PostService {
             .ok_or(ServiceError::NotFound { entity: "post", id })
     }
 
+    #[tracing::instrument(skip(self))]
     pub async fn list_recent(
         &self,
         cursor: Option<(DateTime<Utc>, i64)>,
@@ -68,6 +71,7 @@ impl PostService {
         Ok(posts)
     }
 
+    #[tracing::instrument(skip(self, input))]
     pub async fn update(
         &self,
         id: i64,
@@ -116,6 +120,7 @@ impl PostService {
             .ok_or(ServiceError::NotFound { entity: "post", id })
     }
 
+    #[tracing::instrument(skip(self))]
     pub async fn delete(
         &self,
         id: i64,
@@ -147,7 +152,7 @@ mod tests {
 
     use super::*;
 
-    async fn make_service() -> PostService {
+    async fn make_service() -> PostService<PostgresPostRepository> {
         // 설정을 읽는다
         let configuration = Arc::new(get_configuration().expect("Failed to get configuration"));
 
@@ -158,7 +163,7 @@ mod tests {
             .await
             .expect("Failed to connect database");
 
-        let repo = Arc::new(PostgresPostRepository::new(pool));
+        let repo = PostgresPostRepository::new(pool);
 
         PostService::new(repo)
     }

@@ -1,16 +1,16 @@
 use crate::{
     auth::password,
     domain::user::{LoginInput, SignupInput, User},
-    repository::user::DynUserRepository,
+    repository::user::UserRepository,
     service::error::ServiceError,
 };
 
-pub struct UserService {
-    repo: DynUserRepository,
+pub struct UserService<UserRepo: UserRepository> {
+    repo: UserRepo,
 }
 
-impl UserService {
-    pub fn new(repo: DynUserRepository) -> Self {
+impl<UserRepo: UserRepository> UserService<UserRepo> {
+    pub fn new(repo: UserRepo) -> Self {
         Self { repo }
     }
 

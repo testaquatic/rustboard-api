@@ -9,12 +9,12 @@ use crate::{
         auth::AuthOpenApiDoc, comment::CommentOpenApiDoc, meta::MetaOpenApiDoc,
         post::PostOpenApiDoc,
     },
-    state::AppState,
+    state::PostgresAppState,
 };
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-pub fn get_swagger_router(app_state: AppState) -> axum::Router {
+pub fn get_swagger_router(app_state: PostgresAppState) -> axum::Router {
     let mut api = OpenApiBuilder::new()
         .info(
             Info::builder()

@@ -9,7 +9,7 @@ use crate::{
     auth::extractor::AuthUser,
     domain::comment::{CommentResponse, CreateCommentInput},
     error::{AppError, ErrorBody},
-    state::AppState,
+    state::PostgresAppState,
 };
 
 #[utoipa::path(
@@ -40,7 +40,7 @@ use crate::{
 pub async fn create_comment(
     auth_user: AuthUser,
     Path(post_id): Path<i64>,
-    State(state): State<AppState>,
+    State(state): State<PostgresAppState>,
     Json(input): Json<CreateCommentInput>,
 ) -> Result<(StatusCode, Json<CommentResponse>), AppError> {
     let comment = state
@@ -70,7 +70,7 @@ pub async fn create_comment(
     tags = ["comments"]
 )]
 pub async fn list_comments(
-    State(state): State<AppState>,
+    State(state): State<PostgresAppState>,
     Path(post_id): Path<i64>,
 ) -> Result<Json<Vec<CommentResponse>>, AppError> {
     let comments = state.comment_service.list_by_post(post_id).await?;

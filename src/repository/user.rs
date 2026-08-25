@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use async_trait::async_trait;
 use sqlx::PgPool;
 
@@ -19,8 +17,7 @@ pub trait UserRepository {
     async fn find_by_id(&self, id: i64) -> Result<Option<User>, RepositoryError>;
 }
 
-pub type DynUserRepository = Arc<dyn UserRepository + Send + Sync>;
-
+#[derive(Clone)]
 pub struct PostgresUserRepository {
     pool: PgPool,
 }

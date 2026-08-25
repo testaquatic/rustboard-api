@@ -33,7 +33,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             tracing_subscriber::EnvFilter::try_from_default_env()
                 .unwrap_or_else(|_| "rustboard_api=debug,tower_http=debug".into()),
         )
-        .with(tracing_subscriber::fmt::layer())
+        .with(
+            tracing_subscriber::fmt::layer()
+                .json()
+                .with_current_span(true)
+                .with_span_list(true)
+                .flatten_event(false),
+        )
         .init();
 
     // DB 풀 만들기
@@ -46,9 +52,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     sqlx::migrate!("./migrations").run(&pool).await?;
 
     // 리포지토리 초기화
-    let posts_repo = Arc::new(PostgresPostRepository::new(pool.clone()));
-    let comments_repo = Arc::new(PostgresCommentRepository::new(pool.clone()));
-    let users_repo = Arc::new(PostgresUserRepository::new(pool.clone()));
+    let posts_repo = PostgresPostRepository::new(pool.clone());
+    let comments_repo = PostgresCommentRepository::new(pool.clone());
+    let users_repo = PostgresUserRepository::new(pool.clone());
 
     // 서비스에 리포지토리 주입
     let post_service = Arc::new(PostService::new(posts_repo.clone()));
@@ -85,7 +91,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .layer(IpGuardLayer)
         .layer(TraceLayer::new_for_http())
         .layer(AddRequestIdLayer);
-
     // 서버 실행
     let listener = tokio::net::TcpListener::bind(configuration.bind_addr).await?;
     tracing::info!(

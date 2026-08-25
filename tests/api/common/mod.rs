@@ -14,7 +14,7 @@ use rustboard_api::{
         user::PostgresUserRepository,
     },
     service::{comment::CommentService, post::PostService, user::UserService},
-    state::AppState,
+    state::{AppState, PostgresAppState},
 };
 use serde_json::{Value, json};
 use sqlx::{QueryBuilder, postgres::PgPoolOptions};
@@ -25,7 +25,7 @@ pub struct TestContext {
     _post_repo: Arc<PostgresPostRepository>,
     _user_repo: Arc<PostgresUserRepository>,
     _comment_repo: Arc<PostgresCommentRepository>,
-    state: AppState,
+    state: PostgresAppState,
 }
 
 impl TestContext {
@@ -37,9 +37,9 @@ impl TestContext {
             .await
             .expect("Failed to connect database");
 
-        let post_repo = Arc::new(PostgresPostRepository::new(pool.clone()));
-        let comment_repo = Arc::new(PostgresCommentRepository::new(pool.clone()));
-        let user_repo = Arc::new(PostgresUserRepository::new(pool.clone()));
+        let post_repo = PostgresPostRepository::new(pool.clone());
+        let comment_repo = PostgresCommentRepository::new(pool.clone());
+        let user_repo = PostgresUserRepository::new(pool.clone());
 
         let post_service = Arc::new(PostService::new(post_repo.clone()));
         let comment_service =
@@ -55,9 +55,9 @@ impl TestContext {
         };
 
         Self {
-            _post_repo: post_repo,
-            _user_repo: user_repo,
-            _comment_repo: comment_repo,
+            _post_repo: Arc::new(post_repo),
+            _user_repo: Arc::new(user_repo),
+            _comment_repo: Arc::new(comment_repo),
             state,
         }
     }
