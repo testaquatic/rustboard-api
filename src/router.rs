@@ -28,22 +28,20 @@ pub fn public_routes() -> Router<PostgresAppState> {
 }
 
 /// 인증이 필수인 라우트
-pub fn protected_routes() -> Router<PostgresAppState> {
+pub fn protected_routes(state: PostgresAppState) -> Router<PostgresAppState> {
     Router::new()
         .route("/posts", post(create_post))
         .route("/posts/{id}", patch(update_post).delete(delete_post))
         .route("/posts/{post_id}/comments", post(create_comment))
         .route("/me", get(me))
+        .route_layer(middleware::from_fn_with_state(state, require_auth))
 }
 
 pub fn create_router(state: PostgresAppState) -> Router {
     // 라우터를 만들고 상태 붙이기
     Router::new()
         .merge(public_routes())
-        .merge(
-            protected_routes()
-                .route_layer(middleware::from_fn_with_state(state.clone(), require_auth)),
-        )
+        .merge(protected_routes(state.clone()))
         .with_state(state.clone())
         .merge(get_swagger_router(state))
 }

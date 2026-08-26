@@ -131,6 +131,8 @@ impl IntoResponse for AppError {
             message,
         };
 
+        crate::metrics::increment_error_count(error_code);
+
         (status, Json(body)).into_response()
     }
 }

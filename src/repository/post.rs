@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use sqlx::{PgPool, query_as};
+use tokio::time::Instant;
 
 use crate::{
     domain::post::{CreatePostInput, Post},
@@ -64,6 +65,8 @@ impl PostRepository for PostgresPostRepository {
 
     #[tracing::instrument(skip(self))]
     async fn find_by_id(&self, id: i64) -> Result<Option<Post>, RepositoryError> {
+        let start = Instant::now();
+
         let row = sqlx::query_as!(
             Post,
             r#"
@@ -75,6 +78,8 @@ impl PostRepository for PostgresPostRepository {
         )
         .fetch_optional(&self.pool)
         .await?;
+
+        crate::metrics::record_db_query_duration("SELECT", "posts", start.elapsed().as_secs_f64());
 
         Ok(row)
     }

@@ -1,11 +1,12 @@
 use std::{net::SocketAddr, sync::Arc, time::Duration};
 
-use axum::http::StatusCode;
+use axum::{http::StatusCode, middleware};
 use rustboard_api::{
     configuration::get_configuration,
     middleware::{
-        ip_guard::IpGuardLayer, rate_limit_error::rate_limit_error_response,
-        rate_limit_key::ForwardedIpKeyExtractor, request_id::AddRequestIdLayer,
+        ip_guard::IpGuardLayer, metrics::track_metrics,
+        rate_limit_error::rate_limit_error_response, rate_limit_key::ForwardedIpKeyExtractor,
+        request_id::AddRequestIdLayer,
     },
     repository::{
         comment::PostgresCommentRepository, post::PostgresPostRepository,
@@ -77,6 +78,7 @@ async fn main() -> Result<(), anyhow::Error> {
         ))
         .layer(governor_layer)
         .layer(IpGuardLayer)
+        .layer(middleware::from_fn(track_metrics))
         .layer(TraceLayer::new_for_http())
         .layer(AddRequestIdLayer);
     // 서버 실행
