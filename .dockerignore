@@ -1,0 +1,8 @@
+target/
+.git/
+.env
+*.md
+tests/
+configuration/
+script/
+sql/
