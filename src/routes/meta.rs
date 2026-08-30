@@ -1,4 +1,4 @@
-use axum::{Json, extract::State};
+use axum::{Json, extract::State, http::StatusCode};
 use serde::Serialize;
 use utoipa::{OpenApi, ToSchema};
 
@@ -9,7 +9,7 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 #[derive(Serialize, ToSchema)]
 pub struct HealthResponse {
     status: &'static str,
-    service: &'static str,
+    service: String,
 }
 
 #[utoipa::path(
@@ -19,16 +19,33 @@ pub struct HealthResponse {
     responses(
         (status = 200, description = "ok", body = HealthResponse, example = json!(HealthResponse{
             status: "ok",
-            service: "rustboard-api",
+            service: "rustboard-api".to_string(),
         }))
     ),
     tags=["meta"]
 )]
-pub async fn health() -> Json<HealthResponse> {
-    Json(HealthResponse {
-        status: "ok",
-        service: "rustboard-api",
-    })
+pub async fn health(State(state): State<PostgresAppState>) -> (StatusCode, Json<HealthResponse>) {
+    if sqlx::query("SELECT 1")
+        .fetch_one(&state.pool)
+        .await
+        .is_err()
+    {
+        return (
+            StatusCode::SERVICE_UNAVAILABLE,
+            Json(HealthResponse {
+                status: "db_unavailable",
+                service: state.configuration.service_name.clone(),
+            }),
+        );
+    }
+
+    (
+        StatusCode::OK,
+        Json(HealthResponse {
+            status: "ok",
+            service: state.configuration.service_name.clone(),
+        }),
+    )
 }
 
 #[derive(Serialize, ToSchema)]
