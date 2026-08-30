@@ -1,5 +1,5 @@
 use opentelemetry::{KeyValue, trace::TracerProvider};
-use opentelemetry_otlp::{MetricExporter, SpanExporter};
+use opentelemetry_otlp::{MetricExporter, SpanExporter, WithExportConfig};
 use opentelemetry_sdk::{
     Resource,
     metrics::{PeriodicReader, SdkMeterProvider},
@@ -8,6 +8,8 @@ use opentelemetry_sdk::{
 use opentelemetry_semantic_conventions::resource::SERVICE_NAME;
 use tracing_opentelemetry::OpenTelemetryLayer;
 use tracing_subscriber::{EnvFilter, layer::SubscriberExt, util::SubscriberInitExt};
+
+use crate::configuration::Settings;
 
 pub struct OtelGuard {
     pub tracer_provider: SdkTracerProvider,
@@ -25,7 +27,7 @@ impl Drop for OtelGuard {
     }
 }
 
-pub fn init_telemetry() -> Result<OtelGuard, anyhow::Error> {
+pub fn init_telemetry(configuration: &Settings) -> Result<OtelGuard, anyhow::Error> {
     // Envfilter
     let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| {
         if cfg!(debug_assertions) {
@@ -56,7 +58,10 @@ pub fn init_telemetry() -> Result<OtelGuard, anyhow::Error> {
     };
 
     // Otel TracerProvider
-    let exporter = SpanExporter::builder().with_tonic().build()?;
+    let exporter = SpanExporter::builder()
+        .with_tonic()
+        .with_endpoint(&configuration.otel_exporter_otlp_endpoint)
+        .build()?;
     let resource = Resource::builder()
         .with_attributes([KeyValue::new(SERVICE_NAME, "rustboard_api")])
         .build();

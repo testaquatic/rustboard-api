@@ -6,12 +6,16 @@ services:
         ports:
             - "3000:3000"
         environment:
+            - APP_BIND_ADDR=0.0.0.0:3000
+            - APP_SERVICE_NAME=rustboard-api
             - APP_DATABASE__USERNAME=rustboard
             - APP_DATABASE__PASSWORD=rustboard
             - APP_DATABASE__DATABASE_NAME=rustboard
             - APP_DATABASE__HOST=db
             - APP_DATABASE__PORT=5432
-            - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+            - APP_JWT_SECRET=super-secret-key-change-in-production
+            - APP_JWT_EXPIRATION_MINUTES=15
+            - APP_OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
         depends_on:
             db:
                 condition: service_healthy

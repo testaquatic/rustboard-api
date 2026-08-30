@@ -8,3 +8,4 @@ database:
   port: 5432
 jwt_secret: "super-secret-key-change-in-production"
 jwt_expiration_minutes: 15
+otel_exporter_oltp_endpoint: "http://localhost:4317"

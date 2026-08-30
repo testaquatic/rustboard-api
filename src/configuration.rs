@@ -12,6 +12,7 @@ pub struct Settings {
     pub database: DatabaseSettings,
     pub jwt_secret: String,
     pub jwt_expiration_minutes: i64,
+    pub otel_exporter_otlp_endpoint: String,
 }
 
 #[derive(Deserialize, Clone)]

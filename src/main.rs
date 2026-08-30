@@ -30,7 +30,7 @@ async fn main() -> Result<(), anyhow::Error> {
     let configuration = Arc::new(get_configuration()?);
 
     // 로깅
-    let _guard = telemetry::init_telemetry()?;
+    let _guard = telemetry::init_telemetry(&configuration)?;
 
     // DB 풀 만들기
     let pool = PgPoolOptions::new()

@@ -149,6 +149,7 @@ fn get_test_configuration() -> Settings {
         jwt_expiration_minutes: 15,
         service_name: "rustboard-api-test".to_string(),
         bind_addr: "127.0.0.1:3000".parse().unwrap(),
+        otel_exporter_otlp_endpoint: "http://localhost:4317".to_string(),
     }
 }
 
