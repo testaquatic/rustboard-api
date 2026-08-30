@@ -9,7 +9,7 @@ use axum::{
 use serde_json::json;
 use tower::{Layer, Service};
 
-const ALLOWED_IPS: &[&str] = &["127.0.0.1", "::1"];
+const FORBIDDEN_IPS: &[&str] = &[];
 
 #[derive(Clone)]
 pub struct IpGuardLayer;
@@ -64,7 +64,7 @@ where
         let future = self.inner.call(req);
 
         Box::pin(async move {
-            if !ALLOWED_IPS.contains(&ip_addr.as_str()) {
+            if FORBIDDEN_IPS.contains(&ip_addr.as_str()) {
                 tracing::warn!(client_ip = %ip_addr, "허용되지 않은 IP에서 관리 엔드포인트 접근 시도");
                 return Ok((
                     StatusCode::FORBIDDEN,

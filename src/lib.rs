@@ -8,6 +8,7 @@ pub mod repository;
 pub mod router;
 pub mod routes;
 pub mod service;
+pub mod shutdown;
 pub mod state;
 pub mod swagger;
 pub mod telemetry;

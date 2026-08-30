@@ -1,0 +1,48 @@
+services:
+    app:
+        build:
+            context: .
+            dockerfile: Dockerfile
+        ports:
+            - "3000:3000"
+        environment:
+            - APP_DATABASE__USERNAME=rustboard
+            - APP_DATABASE__PASSWORD=rustboard
+            - APP_DATABASE__DATABASE_NAME=rustboard
+            - APP_DATABASE__HOST=db
+            - APP_DATABASE__PORT=5432
+            - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+        depends_on:
+            db:
+                condition: service_healthy
+        stop_grace_period: 30s
+        restart: unless-stopped
+    db:
+        image: postgres:18
+        ports:
+            - "5432:5432"
+        environment:
+            - POSTGRES_USER=rustboard
+            - POSTGRES_PASSWORD=rustboard
+            - POSTGRES_DB=rustboard
+        volumes:
+            - rustboard-db-data:/var/lib/postgresql/18/docker
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U rustboard -d rustboard"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+    otel-collector:
+        image: jaegertracing/all-in-one
+        ports:
+            - "4317:4317"
+            - "16686:16686"
+        environment:
+            - COLLECTOR_OTLP_ENABLED=true
+
+volumes:
+    rustboard-db-data:
+
+networks:
+    default:
+        name: rustboard-net

@@ -14,6 +14,7 @@ use rustboard_api::{
     },
     router::create_router,
     service::{comment::CommentService, post::PostService, user::UserService},
+    shutdown::shutdown_signal,
     state::AppState,
     telemetry,
 };
@@ -55,7 +56,7 @@ async fn main() -> Result<(), anyhow::Error> {
         post_service,
         comment_service,
         configuration: configuration.clone(),
-        pool,
+        pool: pool.clone(),
         user_service,
     };
 
@@ -88,36 +89,33 @@ async fn main() -> Result<(), anyhow::Error> {
         configuration.service_name,
         listener.local_addr()?
     );
-    axum::serve(
+    let server = axum::serve(
         listener,
         app.into_make_service_with_connect_info::<SocketAddr>(),
     )
-    .with_graceful_shutdown(shutdown_signal())
-    .await?;
+    .with_graceful_shutdown(shutdown_signal());
+
+    if let Err(e) = server.await {
+        tracing::error!(error = %e, "서버 에러");
+    }
+
+    tracing::info!("리소스 정리를 시작합니다 (최대 10초)");
+    tokio::select! {
+        _ = cleanup(pool) => {
+            tracing::info!("리소스 정리 완료");
+        }
+
+        _ = tokio::time::sleep(Duration::from_secs(10)) => {
+            tracing::warn!("리소스 정리 타임아웃, 강제 종료합니다");
+        }
+    }
+
+    tracing::info!("서버 종료 완료");
 
     Ok(())
 }
 
-async fn shutdown_signal() {
-    let ctrl_c = tokio::signal::ctrl_c();
-
-    #[cfg(unix)]
-    let terminate = async {
-        tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
-            .expect("SIGTERM 시그널 핸들러 설치 실패")
-            .recv()
-            .await;
-    };
-
-    #[cfg(not(unix))]
-    let terminate = std::future::pending::<()>();
-
-    tokio::select! {
-        _ = ctrl_c => {
-            tracing::info!("Ctrl+C 수신, 종료시작")
-        }
-        _ = terminate => {
-            tracing::info!("SIGTERM 수신, 종료시작")
-        }
-    }
+async fn cleanup(pool: sqlx::PgPool) {
+    pool.close().await;
+    tracing::info!("DB 커넥션 풀 종료");
 }

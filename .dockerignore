@@ -3,6 +3,6 @@ target/
 .env
 *.md
 tests/
-configuration/
+# configuration/
 script/
 sql/

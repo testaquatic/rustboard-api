@@ -18,5 +18,6 @@ RUN cargo build --release
 FROM gcr.io/distroless/cc-debian13 AS runtime
 WORKDIR /app
 COPY --from=chef-builder /app/target/release/rustboard-api /app/rustboard-api
+COPY ./configuration/base.yaml /app/configuration/base.yaml
 EXPOSE 3000
 ENTRYPOINT [ "/app/rustboard-api" ]
