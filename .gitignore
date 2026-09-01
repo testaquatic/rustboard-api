@@ -11,7 +11,8 @@ Cargo.lock
 # 승인되지 않은 스냅삿
 *.snap.new
 
+.idea/
+
 # Added by cargo
 /target
 
-sql/.idea/
