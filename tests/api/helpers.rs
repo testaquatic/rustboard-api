@@ -1,4 +1,5 @@
-use rustboard_api::{start_up::start_app, configuration::Settings};
+use reqwest::Response;
+use rustboard_api::{configuration::Settings, start_up::start_app};
 use sqlx::{PgPool, QueryBuilder, migrate};
 use tokio::task::JoinHandle;
 use uuid::Uuid;
@@ -8,28 +9,78 @@ pub struct TestClient {
     _server_handle: JoinHandle<()>,
 }
 
-impl TestClient {}
+impl TestClient {
+    pub async fn new() -> TestClient {
+        let mut settings = Settings::build().expect("Failed to build settings");
+        settings = set_test_db(settings).await;
 
-pub async fn create_test_app() -> TestClient {
-    let mut settings = Settings::build().expect("Failed to build settings");
-    settings = set_test_db(settings).await;
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+            .await
+            .expect("Failed to bind to address");
+        let listener_port = listener
+            .local_addr()
+            .expect("Failed to get listener address")
+            .port();
 
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
-        .await
-        .expect("Failed to bind to address");
-    let listener_port = listener
-        .local_addr()
-        .expect("Failed to get listener address")
-        .port();
+        settings.app_addr = format!("127.0.0.1:{}", listener_port);
 
-    settings.app_addr = format!("127.0.0.1:{}", listener_port);
+        let settings_cloned = settings.clone();
+        let server_handle = tokio::spawn(async move { start_app(settings_cloned, listener).await });
 
-    let settings_cloned = settings.clone();
-    let server_handle = tokio::spawn(async move { start_app(settings_cloned, listener).await });
+        TestClient {
+            settings,
+            _server_handle: server_handle,
+        }
+    }
 
-    TestClient {
-        settings,
-        _server_handle: server_handle,
+    pub async fn get(&self, uri: &str) -> Response {
+        reqwest::get(self.server_uri(uri)).await.unwrap()
+    }
+
+    pub async fn post_json(&self, uri: &str, body: &serde_json::Value) -> Response {
+        reqwest::Client::new()
+            .post(self.server_uri(uri))
+            .json(&body)
+            .send()
+            .await
+            .unwrap()
+    }
+
+    pub async fn post_json_with_token(
+        &self,
+        uri: &str,
+        body: &serde_json::Value,
+        token: &str,
+    ) -> Response {
+        reqwest::Client::new()
+            .post(self.server_uri(uri))
+            .json(&body)
+            .bearer_auth(token)
+            .send()
+            .await
+            .unwrap()
+    }
+
+    pub async fn request<T: serde::Serialize>(
+        &self,
+        method: reqwest::Method,
+        uri: &str,
+        body: &T,
+        token: Option<&str>,
+    ) -> Response {
+        let mut builder = reqwest::Client::new().request(method, self.server_uri(uri));
+
+        if let Some(token) = token {
+            builder = builder.bearer_auth(token);
+        }
+
+        let response = builder.json(&body).send().await.unwrap();
+
+        response
+    }
+
+    fn server_uri(&self, path: &str) -> String {
+        format!("http://{}{}", &self.settings.app_addr, path)
     }
 }
 

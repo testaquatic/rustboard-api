@@ -1,14 +1,12 @@
 use reqwest::StatusCode;
 
-use crate::helpers::create_test_app;
+use crate::helpers::TestClient;
 
 #[tokio::test]
 async fn test_list_posts() {
-    let app = create_test_app().await;
+    let client = TestClient::new().await;
 
-    let response = reqwest::get(&format!("http://{}/posts", &app.settings.app_addr))
-        .await
-        .expect("Failed to make request");
+    let response = client.get("/posts").await;
 
     assert_eq!(response.status(), StatusCode::OK);
 
