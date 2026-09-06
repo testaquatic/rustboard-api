@@ -1,0 +1,10 @@
+#! 이 설정파일을 base.yaml로 수정해서 사용할 것
+
+# 서버의 주소
+app_addr: "127.0.0.1:3000"
+# 데이터베이스 URL
+database_url: "postgres://postgres:postgres@localhost:5432/rustboard"
+# OpenTelemetry OTLP Export Endpoint
+otel_exporter_otlp_endpoint: "http://localhost:4317"
+# JWT Secret
+jwt_secret: "test_jwt_secret_key"

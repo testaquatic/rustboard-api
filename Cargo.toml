@@ -1,0 +1,43 @@
+[package]
+name = "rustboard-api"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1"
+# 패스워드 해싱
+argon2 = "0.6"
+# 웹 프레임워크
+axum = "0.8"
+# 암호 해싱, argon2id로 전환한 이후로 제거 예정
+bcrypt = "0.19"
+# 시간
+chrono = { version = "0.4", features = ["serde"] }
+# 설정
+config = { version = "0.15", features = ["yaml"] }
+# JWT 토큰
+jsonwebtoken = "11"
+metrics = "0.24"
+# OpenTelemetry
+opentelemetry = "0.32"
+opentelemetry-otlp = { version = "0.32", features = ["grpc-tonic", "metrics"] }
+opentelemetry_sdk = "0.32"
+opentelemetry-semantic-conventions = "0.32"
+# 민감한 정보 로깅 방지
+secrecy = { version = "0.10", features = ["serde"] }
+# 직렬화와 역직렬화
+serde = { version = "1", features = ["derive"] }
+# 데이터 베이스
+sqlx = { version = "0.9", features = ["chrono", "postgres", "runtime-tokio", "tls-rustls"] }
+# 오류처리
+thiserror = "2"
+# 비동기 런타임
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+# Rate limit 미들웨어
+tower_governor = "0.8"
+# 미들웨어
+tower-http = { version = "0.7", features = ["compression-full", "cors", "timeout", "trace"] }
+# 로깅과 트레이싱
+tracing = "0.1"
+tracing-opentelemetry = "0.33"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
