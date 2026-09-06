@@ -1,4 +1,4 @@
-use std::{sync::Arc, time::Duration};
+use std::{net::SocketAddr, sync::Arc, time::Duration};
 
 use axum::http::StatusCode;
 use rustboard_api::{
@@ -54,5 +54,11 @@ async fn main() {
         .layer(TraceLayer::new_for_http())
         .with_state(state);
 
-    axum::serve(listener, app).await.expect("Failed to serve")
+    // Tower의 governor는 request의 connect_info를 사용하기 위해 SocketAddr를 필요로 한다.
+    axum::serve(
+        listener,
+        app.into_make_service_with_connect_info::<SocketAddr>(),
+    )
+    .await
+    .expect("Failed to serve")
 }
