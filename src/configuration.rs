@@ -2,7 +2,7 @@ use secrecy::SecretString;
 use serde::Deserialize;
 
 /// 서버의 설정
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 pub struct Settings {
     /// 서버의 주소
     pub app_addr: String,
