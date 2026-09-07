@@ -1,5 +1,5 @@
 use reqwest::Response;
-use rustboard_api::{configuration::Settings, start_up::start_app};
+use rustboard_api::{configuration::Settings, startup::start_app};
 use sqlx::{PgPool, QueryBuilder, migrate};
 use tokio::task::JoinHandle;
 use uuid::Uuid;

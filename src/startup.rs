@@ -9,8 +9,12 @@ use tower_http::{
 };
 
 use crate::{
-    configuration::Settings, repository::post::PostsRepository, routes::app_router,
-    service::post::PostsService, state::AppState, telemetry::init_telemetry,
+    configuration::Settings,
+    repository::{post::PostsRepository, user::UserRepository},
+    routes::app_router,
+    service::{post::PostsService, user::UserService},
+    state::AppState,
+    telemetry::init_telemetry,
 };
 
 pub async fn start_app(settings: Settings, listener: TcpListener) {
@@ -25,7 +29,8 @@ pub async fn start_app(settings: Settings, listener: TcpListener) {
     // 애플리케이션 상태를 생성한다.
     let state = AppState {
         configuration: Arc::new(settings),
-        posts_service: Arc::new(PostsService::new(PostsRepository::new(pool))),
+        posts_service: Arc::new(PostsService::new(PostsRepository::new(pool.clone()))),
+        user_service: Arc::new(UserService::new(UserRepository::new(pool))),
     };
 
     // Rate limit 설정 (15분당 100회)
@@ -36,7 +41,7 @@ pub async fn start_app(settings: Settings, listener: TcpListener) {
         .expect("Failed to create governor config");
 
     // Axum 라우터 설정
-    let app = app_router()
+    let app = app_router(state.clone())
         .layer(GovernorLayer::new(governor_config))
         .layer(TimeoutLayer::with_status_code(
             StatusCode::REQUEST_TIMEOUT,

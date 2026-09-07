@@ -1,4 +1,4 @@
-pub mod start_up;
+pub mod startup;
 pub mod auth;
 pub mod configuration;
 pub mod domain;

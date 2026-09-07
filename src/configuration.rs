@@ -12,6 +12,8 @@ pub struct Settings {
     pub otel_exporter_otlp_endpoint: String,
     /// JWT Secret
     pub jwt_secret: SecretString,
+    /// JWT 토큰 만료 시간(분)
+    pub jwt_token_expiration_minutes: i64,
 }
 
 impl Settings {

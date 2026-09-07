@@ -13,7 +13,7 @@ pub struct User {
     pub updated_at: DateTime<Utc>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, serde::Deserialize)]
 pub struct LoginInput {
     pub email: String,
     pub password: SecretString,

@@ -8,6 +8,10 @@ pub struct UserRepository {
 }
 
 impl UserRepository {
+    pub fn new(pool: PgPool) -> Self {
+        Self { pool }
+    }
+
     pub async fn find_by_email(&self, email: &str) -> Result<Option<User>, RepositoryError> {
         let user = sqlx::query_as!(
             User,
@@ -68,5 +72,31 @@ impl UserRepository {
         tx.commit().await?;
 
         Ok(user_id.id)
+    }
+
+    /// 사용자를 추가한다.
+    pub async fn add_user(
+        &self,
+        email: &str,
+        password_hash: &SecretString,
+        display_name: &str,
+        role: &str,
+    ) -> Result<User, RepositoryError> {
+        let user = sqlx::query_as!(
+            User,
+            r#"
+            INSERT INTO users (email, password_hash, display_name, role)
+            VALUES ($1, $2, $3, $4)
+            RETURNING id, email, password_hash, display_name, role, created_at, updated_at
+            "#,
+            email,
+            password_hash.expose_secret(),
+            display_name,
+            role,
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(user)
     }
 }

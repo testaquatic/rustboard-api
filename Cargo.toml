@@ -16,7 +16,7 @@ chrono = { version = "0.4", features = ["serde"] }
 # 설정
 config = { version = "0.15", features = ["yaml"] }
 # JWT 토큰
-jsonwebtoken = "11"
+jsonwebtoken = { version = "11", features = ["rust_crypto"] }
 metrics = "0.24"
 # OpenTelemetry
 opentelemetry = "0.32"

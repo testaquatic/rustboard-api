@@ -1,4 +1,4 @@
-use rustboard_api::{start_up::start_app, configuration::Settings};
+use rustboard_api::{startup::start_app, configuration::Settings};
 
 #[tokio::main]
 async fn main() {

@@ -9,7 +9,7 @@ use axum::{
 };
 
 use crate::{
-    middleware::require_auth::require_auth,
+    auth::extractor::AuthUser,
     routes::{
         auth::{login, signup},
         comment::create_comment,
@@ -20,11 +20,11 @@ use crate::{
 };
 
 /// 애플리케이션의 라우터를 설정한다.
-pub fn app_router() -> Router<AppState> {
+pub fn app_router(app_state: AppState) -> Router<AppState> {
     Router::new()
         .merge(auth_routes())
         .merge(me_routes())
-        .nest("/posts", post_routes())
+        .nest("/posts", post_routes(app_state))
 }
 /// 인증과 관련된 라우터를 생성한다.
 fn auth_routes() -> Router<AppState> {
@@ -39,7 +39,7 @@ fn me_routes() -> Router<AppState> {
 }
 
 /// 게시물과 관련된 라우터를 생성한다.
-fn post_routes() -> Router<AppState> {
+fn post_routes(app_state: AppState) -> Router<AppState> {
     let public = Router::new()
         .route("/", get(list_posts))
         .route("/{id}", get(get_post));
@@ -47,7 +47,9 @@ fn post_routes() -> Router<AppState> {
     let protected = Router::new()
         .route("/", post(create_post))
         .route("/{id}/comments", post(create_comment))
-        .route_layer(middleware::from_fn(require_auth));
+        .route_layer(middleware::from_extractor_with_state::<AuthUser, AppState>(
+            app_state,
+        ));
 
     public.merge(protected)
 }
