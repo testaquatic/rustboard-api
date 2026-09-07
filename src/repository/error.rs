@@ -5,4 +5,7 @@ pub enum RepositoryError {
 
     #[error("{entity}(id={id})를 찾을 수 없습니다")]
     NotFound { entity: String, id: i64 },
+
+    #[error("이미 존재하는 {entity} 입니다.")]
+    AlreadyExists { entity: String },
 }

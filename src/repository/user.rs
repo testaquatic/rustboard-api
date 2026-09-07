@@ -82,6 +82,23 @@ impl UserRepository {
         display_name: &str,
         role: &str,
     ) -> Result<User, RepositoryError> {
+        let mut tx = self.pool.begin().await?;
+
+        if sqlx::query!(
+            r#"
+            SELECT 1 as one FROM users WHERE email = $1
+            "#,
+            email
+        )
+        .fetch_optional(tx.as_mut())
+        .await?
+        .is_some()
+        {
+            return Err(RepositoryError::AlreadyExists {
+                entity: "이메일".to_string(),
+            });
+        };
+
         let user = sqlx::query_as!(
             User,
             r#"
@@ -94,8 +111,10 @@ impl UserRepository {
             display_name,
             role,
         )
-        .fetch_one(&self.pool)
+        .fetch_one(tx.as_mut())
         .await?;
+
+        tx.commit().await?;
 
         Ok(user)
     }

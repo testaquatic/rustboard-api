@@ -1,7 +1,7 @@
 use crate::{
     auth::password::{self},
     domain::user::{LoginInput, User},
-    repository::user::UserRepository,
+    repository::{error::RepositoryError, user::UserRepository},
     routes::auth::SignupInput,
     service::error::ServiceError,
 };
@@ -65,7 +65,14 @@ impl UserService {
                 &signup_input.display_name,
                 "user",
             )
-            .await?;
+            .await
+            .map_err(|e| {
+                if let RepositoryError::AlreadyExists { entity } = e {
+                    ServiceError::Validation(entity)
+                } else {
+                    e.into()
+                }
+            })?;
 
         Ok(user)
     }
