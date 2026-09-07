@@ -1,4 +1,4 @@
-use reqwest::Response;
+use reqwest::{Client, Response};
 use rustboard_api::{configuration::Settings, startup::start_app};
 use sqlx::{PgPool, QueryBuilder, migrate};
 use tokio::task::JoinHandle;
@@ -6,6 +6,7 @@ use uuid::Uuid;
 
 pub struct TestClient {
     pub settings: Settings,
+    reqwest_client: Client,
     _server_handle: JoinHandle<()>,
 }
 
@@ -27,18 +28,25 @@ impl TestClient {
         let settings_cloned = settings.clone();
         let server_handle = tokio::spawn(async move { start_app(settings_cloned, listener).await });
 
+        let reqwest_client = reqwest::Client::new();
+
         TestClient {
             settings,
+            reqwest_client,
             _server_handle: server_handle,
         }
     }
 
     pub async fn get(&self, uri: &str) -> Response {
-        reqwest::get(self.server_uri(uri)).await.unwrap()
+        self.reqwest_client
+            .get(self.server_uri(uri))
+            .send()
+            .await
+            .unwrap()
     }
 
     pub async fn post_json(&self, uri: &str, body: &serde_json::Value) -> Response {
-        reqwest::Client::new()
+        self.reqwest_client
             .post(self.server_uri(uri))
             .json(&body)
             .send()
@@ -52,7 +60,7 @@ impl TestClient {
         body: &serde_json::Value,
         token: &str,
     ) -> Response {
-        reqwest::Client::new()
+        self.reqwest_client
             .post(self.server_uri(uri))
             .json(&body)
             .bearer_auth(token)
@@ -68,7 +76,7 @@ impl TestClient {
         body: &T,
         token: Option<&str>,
     ) -> Response {
-        let mut builder = reqwest::Client::new().request(method, self.server_uri(uri));
+        let mut builder = self.reqwest_client.request(method, self.server_uri(uri));
 
         if let Some(token) = token {
             builder = builder.bearer_auth(token);

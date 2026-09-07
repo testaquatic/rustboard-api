@@ -1,0 +1,9 @@
+---
+source: tests/api/auth_test.rs
+expression: response_json
+---
+{
+  "created_at": "[timestamp]",
+  "id": "[id]",
+  "updated_at": "[timestamp]"
+}

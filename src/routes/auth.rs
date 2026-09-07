@@ -3,6 +3,7 @@ use axum::response::{IntoResponse, Response};
 use axum::{Json, extract::State};
 use secrecy::SecretString;
 
+use crate::domain::user::User;
 use crate::{auth::jwt::create_token, domain::user::LoginInput, error::AppError, state::AppState};
 
 /// 회원 가입할 때 입력하는 정보
@@ -13,13 +14,30 @@ pub struct SignupInput {
     pub display_name: String,
 }
 
+#[derive(Debug, serde::Serialize)]
+pub struct SignupResponse {
+    pub id: i64,
+    pub created_at: i64,
+    pub updated_at: i64,
+}
+
+impl From<User> for SignupResponse {
+    fn from(value: User) -> Self {
+        Self {
+            id: value.id,
+            created_at: value.created_at.timestamp(),
+            updated_at: value.updated_at.timestamp(),
+        }
+    }
+}
+
 pub async fn signup(
     app_state: State<AppState>,
     signup_input: Json<SignupInput>,
-) -> Result<axum::http::StatusCode, AppError> {
-    app_state.user_service.signup(&signup_input).await?;
+) -> Result<(StatusCode, Json<SignupResponse>), AppError> {
+    let user = app_state.user_service.signup(&signup_input).await?;
 
-    Ok(axum::http::StatusCode::CREATED)
+    Ok((StatusCode::CREATED, Json(user.into())))
 }
 
 /// 로그인 했을 때 돌려주는 정보
