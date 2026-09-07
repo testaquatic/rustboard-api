@@ -66,3 +66,50 @@ async fn test_signup_duplicate_email() {
             .contains("이메일")
     );
 }
+
+#[tokio::test]
+async fn test_create_post_without_auth() {
+    let client = TestClient::new().await;
+
+    let res = client
+        .post_json(
+            "/posts",
+            &serde_json::json!({
+                "title": "Test title",
+                "content": "Test content"
+            }),
+        )
+        .await;
+
+    assert_eq!(res.status(), StatusCode::UNAUTHORIZED);
+    assert_eq!(
+        res.json::<serde_json::Value>().await.unwrap()["error"]
+            .as_str()
+            .unwrap(),
+        "unauthorized"
+    );
+}
+
+#[tokio::test]
+async fn test_create_post_with_invalid_token() {
+    let client = TestClient::new().await;
+
+    let res = client
+        .post_json_with_token(
+            "/posts",
+            &serde_json::json!({
+                "title": "Test title",
+                "content": "Test content"
+            }),
+            "invalid_token",
+        )
+        .await;
+
+    assert_eq!(res.status(), StatusCode::UNAUTHORIZED);
+    assert_eq!(
+        res.json::<serde_json::Value>().await.unwrap()["error"]
+            .as_str()
+            .unwrap(),
+        "unauthorized"
+    );
+}
