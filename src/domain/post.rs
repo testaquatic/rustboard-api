@@ -41,3 +41,26 @@ pub struct PostListResponse {
     pub total: i64,
     pub page: i64,
 }
+
+#[derive(Debug, serde::Deserialize)]
+pub struct CreatePostInput {
+    pub title: String,
+    pub content: String,
+}
+
+#[derive(serde::Serialize)]
+pub struct PostResponse {
+    title: String,
+    content: String,
+    author_id: String,
+}
+
+impl From<PostRow> for PostResponse {
+    fn from(value: PostRow) -> Self {
+        Self {
+            title: value.title,
+            content: value.content,
+            author_id: value.author_id.to_string(),
+        }
+    }
+}

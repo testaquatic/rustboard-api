@@ -1,31 +1,16 @@
 use axum::{
     Json,
     extract::{Path, Query, State},
+    http::StatusCode,
 };
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
 use crate::{
-    domain::post::{PostListResponse, PostRow},
+    auth::extractor::AuthUser,
+    domain::post::{CreatePostInput, PostListResponse, PostResponse},
     error::AppError,
     state::AppState,
 };
-
-#[derive(Serialize)]
-pub struct PostResponse {
-    title: String,
-    content: String,
-    author_id: String,
-}
-
-impl From<PostRow> for PostResponse {
-    fn from(value: PostRow) -> Self {
-        Self {
-            title: value.title,
-            content: value.content,
-            author_id: value.author_id.to_string(),
-        }
-    }
-}
 
 pub async fn get_post(
     State(state): State<AppState>,
@@ -59,4 +44,15 @@ pub async fn list_posts(
     Ok(Json(posts))
 }
 
-pub async fn create_post() {}
+pub async fn create_post(
+    State(state): State<AppState>,
+    auth_user: AuthUser,
+    create_post_input: Json<CreatePostInput>,
+) -> Result<(StatusCode, Json<PostResponse>), AppError> {
+    let post = state
+        .posts_service
+        .create_post(&create_post_input, auth_user.user_id)
+        .await?;
+
+    Ok((StatusCode::CREATED, Json(PostResponse::from(post))))
+}

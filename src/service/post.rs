@@ -1,5 +1,5 @@
 use crate::{
-    domain::post::{PostListResponse, PostRow},
+    domain::post::{CreatePostInput, PostListResponse, PostRow},
     repository::post::PostsRepository,
     service::error::ServiceError,
 };
@@ -32,6 +32,23 @@ impl PostsService {
                 id,
             });
         };
+
+        Ok(post_response)
+    }
+
+    pub async fn create_post(
+        &self,
+        create_post_input: &CreatePostInput,
+        author_id: i64,
+    ) -> Result<PostRow, ServiceError> {
+        let post_response = self
+            .post_rep
+            .create(
+                &create_post_input.title,
+                &create_post_input.content,
+                author_id,
+            )
+            .await?;
 
         Ok(post_response)
     }

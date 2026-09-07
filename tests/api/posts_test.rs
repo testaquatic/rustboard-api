@@ -59,7 +59,7 @@ async fn test_create_post_with_auth() {
             "/posts",
             &serde_json::json!({
                 "title": "Test Post",
-                "body": "Hello World",
+                "content": "Hello World",
             }),
             &token,
         )
@@ -73,5 +73,5 @@ async fn test_create_post_with_auth() {
         .expect("Failed to parse response");
 
     assert_eq!(json["title"].as_str().unwrap(), "Test Post");
-    assert_eq!(json["body"].as_str().unwrap(), "Hello World");
+    assert_eq!(json["content"].as_str().unwrap(), "Hello World");
 }
