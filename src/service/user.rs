@@ -5,12 +5,12 @@ use crate::{
     service::error::ServiceError,
 };
 
-pub struct UserService<UserRepo: UserRepository> {
-    repo: UserRepo,
+pub struct UserService {
+    repo: UserRepository,
 }
 
-impl<UserRepo: UserRepository> UserService<UserRepo> {
-    pub fn new(repo: UserRepo) -> Self {
+impl UserService {
+    pub fn new(repo: UserRepository) -> Self {
         Self { repo }
     }
 

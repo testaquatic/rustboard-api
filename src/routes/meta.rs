@@ -2,7 +2,7 @@ use axum::{Json, extract::State, http::StatusCode};
 use serde::Serialize;
 use utoipa::{OpenApi, ToSchema};
 
-use crate::state::PostgresAppState;
+use crate::state::AppState;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -24,7 +24,7 @@ pub struct HealthResponse {
     ),
     tags=["meta"]
 )]
-pub async fn health(State(state): State<PostgresAppState>) -> (StatusCode, Json<HealthResponse>) {
+pub async fn health(State(state): State<AppState>) -> (StatusCode, Json<HealthResponse>) {
     if sqlx::query("SELECT 1")
         .fetch_one(&state.pool)
         .await
@@ -66,7 +66,7 @@ pub struct VersionResponse {
     ),
     tags=["meta"]
 )]
-pub async fn version(State(state): State<PostgresAppState>) -> Json<VersionResponse> {
+pub async fn version(State(state): State<AppState>) -> Json<VersionResponse> {
     Json(VersionResponse {
         service: state.configuration.service_name.clone(),
         version: VERSION,

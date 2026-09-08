@@ -13,18 +13,22 @@ argon2 = "0.5"
 async-trait = "0.1"
 
 # Web framework
-axum = "0.8"
+axum = { version = "0.8", features = ["ws"] }
 
 # 날짜/시간
 chrono = { version = "0.4", features = ["serde"] }
 
 # configuration
 config = "0.15"
+
+# JWT
 jsonwebtoken = { version = "11", features = ["rust_crypto"] }
+
+# OpenTelemetry
 opentelemetry = "0.32"
 opentelemetry-otlp = { version = "0.32", features = ["grpc-tonic"] }
-opentelemetry-semantic-conventions = "0.32"
 opentelemetry_sdk = "0.32"
+opentelemetry-semantic-conventions = "0.32"
 
 # 해싱
 password-hash = { version = "0.6", features = ["getrandom"] }
@@ -37,7 +41,7 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 
 # 데이터베이스
-sqlx = { version = "0.8", features = ["runtime-tokio", "postgres", "chrono"] }
+sqlx = { version = "0.8", features = ["chrono", "postgres", "runtime-tokio"] }
 
 # error handling
 thiserror = "2"
@@ -45,11 +49,10 @@ thiserror = "2"
 # Async runtime
 tokio = { version = "1", features = ["macros", "parking_lot", "rt-multi-thread", "signal"] }
 
-
 # Middleware
 tower = "0.5"
-tower-http = { version = "0.7", features = ["compression-gzip", "cors", "timeout", "trace"] }
 tower_governor = "0.8"
+tower-http = { version = "0.7", features = ["compression-gzip", "cors", "timeout", "trace"] }
 
 # Logging
 tracing = "0.1"
@@ -57,7 +60,7 @@ tracing-opentelemetry = "0.33"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 
 # Swagger
-utoipa = {version = "5", features = ["chrono"] }
+utoipa = { version = "5", features = ["chrono"] }
 utoipa-axum = "0.2"
 utoipa-swagger-ui = { version = "9", features = ["axum"] }
 
@@ -65,7 +68,5 @@ utoipa-swagger-ui = { version = "9", features = ["axum"] }
 uuid = { version = "1", features = ["v4"] }
 
 [dev-dependencies]
-http-body-util = "0.1.5"
-insta = { version = "1", features = ["json", "redactions"]}
-tower = { version = "0.5", features = ["util"] }
-
+# JSON 구조 검사
+insta = { version = "1", features = ["json", "redactions"] }

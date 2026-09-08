@@ -8,10 +8,7 @@ use rustboard_api::{
         rate_limit_error::rate_limit_error_response, rate_limit_key::ForwardedIpKeyExtractor,
         request_id::AddRequestIdLayer,
     },
-    repository::{
-        comment::PostgresCommentRepository, post::PostgresPostRepository,
-        user::PostgresUserRepository,
-    },
+    repository::{comment::CommentRepository, post::PostRepository, user::UserRepository},
     router::create_router,
     service::{comment::CommentService, post::PostService, user::UserService},
     shutdown::shutdown_signal,
@@ -42,9 +39,9 @@ async fn main() -> Result<(), anyhow::Error> {
     sqlx::migrate!("./migrations").run(&pool).await?;
 
     // 리포지토리 초기화
-    let posts_repo = PostgresPostRepository::new(pool.clone());
-    let comments_repo = PostgresCommentRepository::new(pool.clone());
-    let users_repo = PostgresUserRepository::new(pool.clone());
+    let posts_repo = PostRepository::new(pool.clone());
+    let comments_repo = CommentRepository::new(pool.clone());
+    let users_repo = UserRepository::new(pool.clone());
 
     // 서비스에 리포지토리 주입
     let post_service = Arc::new(PostService::new(posts_repo.clone()));

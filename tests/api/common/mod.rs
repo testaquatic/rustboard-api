@@ -9,12 +9,9 @@ use axum::{
 use rustboard_api::{
     configuration::{DatabaseSettings, Settings},
     domain::post::CreatePostInput,
-    repository::{
-        comment::PostgresCommentRepository, post::PostgresPostRepository,
-        user::PostgresUserRepository,
-    },
+    repository::{comment::CommentRepository, post::PostRepository, user::UserRepository},
     service::{comment::CommentService, post::PostService, user::UserService},
-    state::{AppState, PostgresAppState},
+    state::AppState,
 };
 use serde_json::{Value, json};
 use sqlx::{QueryBuilder, postgres::PgPoolOptions};
@@ -22,10 +19,10 @@ use tower::ServiceExt;
 use uuid::Uuid;
 
 pub struct TestContext {
-    _post_repo: Arc<PostgresPostRepository>,
-    _user_repo: Arc<PostgresUserRepository>,
-    _comment_repo: Arc<PostgresCommentRepository>,
-    state: PostgresAppState,
+    _post_repo: Arc<PostRepository>,
+    _user_repo: Arc<UserRepository>,
+    _comment_repo: Arc<CommentRepository>,
+    state: AppState,
 }
 
 impl TestContext {
@@ -37,9 +34,9 @@ impl TestContext {
             .await
             .expect("Failed to connect database");
 
-        let post_repo = PostgresPostRepository::new(pool.clone());
-        let comment_repo = PostgresCommentRepository::new(pool.clone());
-        let user_repo = PostgresUserRepository::new(pool.clone());
+        let post_repo = PostRepository::new(pool.clone());
+        let comment_repo = CommentRepository::new(pool.clone());
+        let user_repo = UserRepository::new(pool.clone());
 
         let post_service = Arc::new(PostService::new(post_repo.clone()));
         let comment_service =

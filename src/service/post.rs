@@ -12,12 +12,12 @@ use crate::{
 const TITLE_MAX: usize = 200;
 const BODY_MAX: usize = 10_000;
 
-pub struct PostService<PostRepo: PostRepository> {
-    repo: PostRepo,
+pub struct PostService {
+    repo: PostRepository,
 }
 
-impl<PostRepo: PostRepository> PostService<PostRepo> {
-    pub fn new(repo: PostRepo) -> Self {
+impl PostService {
+    pub fn new(repo: PostRepository) -> Self {
         Self { repo }
     }
 
@@ -148,11 +148,11 @@ mod tests {
 
     use sqlx::postgres::PgPoolOptions;
 
-    use crate::{configuration::get_configuration, repository::post::PostgresPostRepository};
+    use crate::configuration::get_configuration;
 
     use super::*;
 
-    async fn make_service() -> PostService<PostgresPostRepository> {
+    async fn make_service() -> PostService {
         // 설정을 읽는다
         let configuration = Arc::new(get_configuration().expect("Failed to get configuration"));
 
@@ -163,7 +163,7 @@ mod tests {
             .await
             .expect("Failed to connect database");
 
-        let repo = PostgresPostRepository::new(pool);
+        let repo = PostRepository::new(pool);
 
         PostService::new(repo)
     }

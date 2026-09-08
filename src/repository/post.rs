@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use sqlx::{PgPool, query_as};
 use tokio::time::Instant;
@@ -8,40 +7,20 @@ use crate::{
     repository::error::RepositoryError,
 };
 
-#[async_trait]
-pub trait PostRepository {
-    async fn insert(&self, input: CreatePostInput, author_id: i64)
-    -> Result<Post, RepositoryError>;
-    async fn find_by_id(&self, id: i64) -> Result<Option<Post>, RepositoryError>;
-    async fn list(
-        &self,
-        cursor: Option<(DateTime<Utc>, i64)>,
-        limit: i32,
-    ) -> Result<Vec<Post>, RepositoryError>;
-    async fn update(
-        &self,
-        id: i64,
-        title: Option<&str>,
-        body: Option<&str>,
-    ) -> Result<Option<Post>, RepositoryError>;
-    async fn delete(&self, id: i64) -> Result<bool, RepositoryError>;
-}
-
 #[derive(Clone)]
-pub struct PostgresPostRepository {
+pub struct PostRepository {
     pool: PgPool,
 }
 
-impl PostgresPostRepository {
+impl PostRepository {
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
 }
 
-#[async_trait]
-impl PostRepository for PostgresPostRepository {
+impl PostRepository {
     #[tracing::instrument(skip(self, input), fields(table = "posts"))]
-    async fn insert(
+    pub async fn insert(
         &self,
         input: CreatePostInput,
         author_id: i64,
@@ -64,7 +43,7 @@ impl PostRepository for PostgresPostRepository {
     }
 
     #[tracing::instrument(skip(self))]
-    async fn find_by_id(&self, id: i64) -> Result<Option<Post>, RepositoryError> {
+    pub async fn find_by_id(&self, id: i64) -> Result<Option<Post>, RepositoryError> {
         let start = Instant::now();
 
         let row = sqlx::query_as!(
@@ -85,7 +64,7 @@ impl PostRepository for PostgresPostRepository {
     }
 
     #[tracing::instrument(skip(self))]
-    async fn list(
+    pub async fn list(
         &self,
         cursor: Option<(DateTime<Utc>, i64)>,
         limit: i32,
@@ -131,7 +110,7 @@ impl PostRepository for PostgresPostRepository {
     }
 
     #[tracing::instrument(skip(self, title, body))]
-    async fn update(
+    pub async fn update(
         &self,
         id: i64,
         title: Option<&str>,
@@ -158,7 +137,7 @@ impl PostRepository for PostgresPostRepository {
     }
 
     #[tracing::instrument(skip(self))]
-    async fn delete(&self, id: i64) -> Result<bool, RepositoryError> {
+    pub async fn delete(&self, id: i64) -> Result<bool, RepositoryError> {
         let result = sqlx::query!(
             r#"
             DELETE FROM posts

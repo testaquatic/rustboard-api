@@ -1,7 +1,7 @@
 use axum::{extract::FromRequestParts, http::header};
 use jsonwebtoken::{DecodingKey, Validation, decode};
 
-use crate::{auth::jwt::Claims, domain::role::Role, error::AppError, state::PostgresAppState};
+use crate::{auth::jwt::Claims, domain::role::Role, error::AppError, state::AppState};
 
 #[derive(Debug, Clone)]
 pub struct AuthUser {
@@ -27,12 +27,12 @@ impl AuthUser {
     }
 }
 
-impl FromRequestParts<PostgresAppState> for AuthUser {
+impl FromRequestParts<AppState> for AuthUser {
     type Rejection = AppError;
 
     async fn from_request_parts(
         parts: &mut axum::http::request::Parts,
-        state: &PostgresAppState,
+        state: &AppState,
     ) -> Result<Self, Self::Rejection> {
         // Authorization 헤더 꺼내기
         let auth_header = parts
@@ -64,12 +64,12 @@ impl FromRequestParts<PostgresAppState> for AuthUser {
 #[derive(Debug, Clone)]
 pub struct OptionalAuthUser(pub Option<AuthUser>);
 
-impl FromRequestParts<PostgresAppState> for OptionalAuthUser {
+impl FromRequestParts<AppState> for OptionalAuthUser {
     type Rejection = AppError;
 
     async fn from_request_parts(
         parts: &mut axum::http::request::Parts,
-        state: &PostgresAppState,
+        state: &AppState,
     ) -> Result<Self, Self::Rejection> {
         // Authorization 헤더가 없으면 None
         let Some(auth_header) = parts

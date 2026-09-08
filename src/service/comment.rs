@@ -4,17 +4,13 @@ use crate::{
     service::error::ServiceError,
 };
 
-pub struct CommentService<PostRepo: PostRepository, CommentRepo: CommentRepository> {
-    posts_repo: PostRepo,
-    comments_repo: CommentRepo,
+pub struct CommentService {
+    posts_repo: PostRepository,
+    comments_repo: CommentRepository,
 }
 
-impl<PostRepo, CommentRepo> CommentService<PostRepo, CommentRepo>
-where
-    PostRepo: PostRepository,
-    CommentRepo: CommentRepository,
-{
-    pub fn new(posts_repo: PostRepo, comments_repo: CommentRepo) -> Self {
+impl CommentService {
+    pub fn new(posts_repo: PostRepository, comments_repo: CommentRepository) -> Self {
         Self {
             posts_repo,
             comments_repo,

@@ -11,7 +11,7 @@ use crate::{
     auth::extractor::{AuthUser, OptionalAuthUser},
     domain::post::{CreatePostInput, PostResponse, UpdatePostInput},
     error::{AppError, ErrorBody},
-    state::PostgresAppState,
+    state::AppState,
 };
 
 const DEFAULT_LIMIT: i32 = 20;
@@ -88,7 +88,7 @@ pub struct PostListResponse {
     tags = ["posts"]
 )]
 pub async fn list_posts(
-    State(state): State<PostgresAppState>,
+    State(state): State<AppState>,
     optional_auth: OptionalAuthUser,
     query: Query<ListQuery>,
 ) -> Result<Json<PostListResponse>, AppError> {
@@ -130,7 +130,7 @@ pub async fn list_posts(
     tags = ["posts"]
 )]
 pub async fn get_post(
-    State(state): State<PostgresAppState>,
+    State(state): State<AppState>,
     Path(id): Path<i64>,
 ) -> Result<Json<PostResponse>, AppError> {
     let post = state.post_service.get_by_id(id).await?;
@@ -155,7 +155,7 @@ pub async fn get_post(
 )]
 pub async fn create_post(
     auth_user: AuthUser,
-    State(state): State<PostgresAppState>,
+    State(state): State<AppState>,
     Json(input): Json<CreatePostInput>,
 ) -> Result<(StatusCode, Json<PostResponse>), AppError> {
     let post = state.post_service.create(input, auth_user.user_id).await?;
@@ -187,7 +187,7 @@ pub async fn create_post(
 pub async fn update_post(
     auth_user: AuthUser,
     Path(id): Path<i64>,
-    State(state): State<PostgresAppState>,
+    State(state): State<AppState>,
     Json(input): Json<UpdatePostInput>,
 ) -> Result<Json<PostResponse>, AppError> {
     let post = state
@@ -217,7 +217,7 @@ pub async fn update_post(
 pub async fn delete_post(
     auth_user: AuthUser,
     Path(id): Path<i64>,
-    State(state): State<PostgresAppState>,
+    State(state): State<AppState>,
 ) -> Result<StatusCode, AppError> {
     state
         .post_service

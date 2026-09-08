@@ -9,7 +9,7 @@ use crate::{
     auth::{extractor::AuthUser, jwt},
     domain::user::{LoginInput, SignupInput, TokenResponse, UserResponse},
     error::{AppError, ErrorBody},
-    state::PostgresAppState,
+    state::AppState,
 };
 
 #[utoipa::path(
@@ -31,7 +31,7 @@ use crate::{
     tags = ["auth"]
 )]
 pub async fn signup(
-    State(state): State<PostgresAppState>,
+    State(state): State<AppState>,
     Json(input): Json<SignupInput>,
 ) -> Result<(StatusCode, Json<UserResponse>), AppError> {
     let user = state.user_service.signup(input).await?;
@@ -58,7 +58,7 @@ pub async fn signup(
     tags = ["auth"]
 )]
 pub async fn login(
-    State(state): State<PostgresAppState>,
+    State(state): State<AppState>,
     Json(input): Json<LoginInput>,
 ) -> Result<Json<TokenResponse>, AppError> {
     let user = state.user_service.login(input).await?;

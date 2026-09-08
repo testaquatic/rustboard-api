@@ -1,36 +1,20 @@
-use async_trait::async_trait;
 use sqlx::PgPool;
 
 use crate::{domain::user::User, repository::error::RepositoryError};
 
-#[async_trait]
-pub trait UserRepository {
-    async fn insert(
-        &self,
-        email: &str,
-        password_hash: &str,
-        display_name: &str,
-    ) -> Result<User, RepositoryError>;
-
-    async fn find_by_email(&self, email: &str) -> Result<Option<User>, RepositoryError>;
-
-    async fn find_by_id(&self, id: i64) -> Result<Option<User>, RepositoryError>;
-}
-
 #[derive(Clone)]
-pub struct PostgresUserRepository {
+pub struct UserRepository {
     pool: PgPool,
 }
 
-impl PostgresUserRepository {
+impl UserRepository {
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
 }
 
-#[async_trait]
-impl UserRepository for PostgresUserRepository {
-    async fn insert(
+impl UserRepository {
+    pub async fn insert(
         &self,
         email: &str,
         password_hash: &str,
@@ -53,7 +37,7 @@ impl UserRepository for PostgresUserRepository {
         Ok(user)
     }
 
-    async fn find_by_email(&self, email: &str) -> Result<Option<User>, RepositoryError> {
+    pub async fn find_by_email(&self, email: &str) -> Result<Option<User>, RepositoryError> {
         let user = sqlx::query_as!(
             User,
             r#"
@@ -69,7 +53,7 @@ impl UserRepository for PostgresUserRepository {
         Ok(user)
     }
 
-    async fn find_by_id(&self, id: i64) -> Result<Option<User>, RepositoryError> {
+    pub async fn find_by_id(&self, id: i64) -> Result<Option<User>, RepositoryError> {
         let user = sqlx::query_as!(
             User,
             r#"

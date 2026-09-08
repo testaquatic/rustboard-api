@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use sqlx::PgPool;
 
 use crate::{
@@ -6,33 +5,17 @@ use crate::{
     repository::error::RepositoryError,
 };
 
-#[async_trait]
-pub trait CommentRepository {
-    async fn insert(
-        &self,
-        post_id: i64,
-        input: CreateCommentInput,
-    ) -> Result<Comment, RepositoryError>;
-
-    async fn list_by_post(&self, post_id: i64) -> Result<Vec<Comment>, RepositoryError>;
-
-    async fn find_by_id(&self, id: i64) -> Result<Option<Comment>, RepositoryError>;
-}
-
 #[derive(Clone)]
-pub struct PostgresCommentRepository {
+pub struct CommentRepository {
     pool: PgPool,
 }
 
-impl PostgresCommentRepository {
+impl CommentRepository {
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
-}
 
-#[async_trait]
-impl CommentRepository for PostgresCommentRepository {
-    async fn insert(
+    pub async fn insert(
         &self,
         post_id: i64,
         input: CreateCommentInput,
@@ -53,7 +36,7 @@ impl CommentRepository for PostgresCommentRepository {
         Ok(row)
     }
 
-    async fn list_by_post(&self, post_id: i64) -> Result<Vec<Comment>, RepositoryError> {
+    pub async fn list_by_post(&self, post_id: i64) -> Result<Vec<Comment>, RepositoryError> {
         let rows = sqlx::query_as!(
             Comment,
             r#"
@@ -70,19 +53,19 @@ impl CommentRepository for PostgresCommentRepository {
         Ok(rows)
     }
 
-    async fn find_by_id(&self, id: i64) -> Result<Option<Comment>, RepositoryError> {
-        let row = sqlx::query_as!(
-            Comment,
-            r#"
-            SELECT id, post_id, body, created_at, updated_at
-            FROM comments
-            WHERE id = $1
-            "#,
-            id
-        )
-        .fetch_optional(&self.pool)
-        .await?;
+    // async fn find_by_id(&self, id: i64) -> Result<Option<Comment>, RepositoryError> {
+    //     let row = sqlx::query_as!(
+    //         Comment,
+    //         r#"
+    //         SELECT id, post_id, body, created_at, updated_at
+    //         FROM comments
+    //         WHERE id = $1
+    //         "#,
+    //         id
+    //     )
+    //     .fetch_optional(&self.pool)
+    //     .await?;
 
-        Ok(row)
-    }
+    //     Ok(row)
+    // }
 }
