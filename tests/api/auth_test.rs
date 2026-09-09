@@ -1,6 +1,5 @@
 use axum::http::StatusCode;
 use serde_json::json;
-use tower::ServiceExt;
 
 use crate::common;
 
@@ -10,31 +9,29 @@ async fn signup_duplicate_email_returns_422() {
 
     // 첫 회원가입
     let response = ctx
-        .app()
-        .oneshot(common::post_json(
+        .post_json(
             "/signup",
+            None,
             &json!({
                 "email": "test@example.com",
                 "password": "password123",
                 "display_name": "Tester",
             }),
-        ))
-        .await
-        .unwrap();
+        )
+        .await;
     assert_eq!(response.status(), StatusCode::CREATED);
 
     // 동일한 이메일로 다시 회원가입 시도
     let response = ctx
-        .app()
-        .oneshot(common::post_json(
+        .post_json(
             "/signup",
+            None,
             &json!({
                 "email": "test@example.com",
                 "password": "password123",
                 "display_name": "Tester2",
             }),
-        ))
-        .await
-        .unwrap();
+        )
+        .await;
     assert_eq!(response.status(), StatusCode::UNPROCESSABLE_ENTITY);
 }

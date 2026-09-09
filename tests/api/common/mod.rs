@@ -1,132 +1,170 @@
-use std::sync::Arc;
+use std::{net::SocketAddr, str::FromStr};
 
-use axum::{
-    Router,
-    body::Body,
-    http::{Method, Request, StatusCode, header},
-    response::Response,
-};
+use axum::http::StatusCode;
+use reqwest::Response;
 use rustboard_api::{
     configuration::{DatabaseSettings, Settings},
     domain::post::CreatePostInput,
-    repository::{comment::CommentRepository, post::PostRepository, user::UserRepository},
-    service::{comment::CommentService, post::PostService, user::UserService},
-    state::AppState,
+    startup::run_app,
+    telemetry,
 };
-use serde_json::{Value, json};
+use serde_json::json;
 use sqlx::{QueryBuilder, postgres::PgPoolOptions};
-use tower::ServiceExt;
+use tokio::{net::TcpListener, task::JoinHandle};
 use uuid::Uuid;
 
 pub struct TestContext {
-    _post_repo: Arc<PostRepository>,
-    _user_repo: Arc<UserRepository>,
-    _comment_repo: Arc<CommentRepository>,
-    state: AppState,
+    _join_handle: JoinHandle<Result<(), anyhow::Error>>,
+    configuration: Settings,
+    reqwest_client: reqwest::Client,
 }
 
 impl TestContext {
     pub async fn new() -> Self {
-        let configuration = create_test_db().await;
+        let mut configuration = get_test_configuration();
+
+        // 로깅
+        let _guard = telemetry::init_telemetry(&configuration).expect("텔레메트리 초기화 실패");
+
+        create_test_db(&configuration).await;
         let pool = PgPoolOptions::new()
-            .max_connections(5)
             .connect(&configuration.database.database_url())
             .await
             .expect("Failed to connect database");
 
-        let post_repo = PostRepository::new(pool.clone());
-        let comment_repo = CommentRepository::new(pool.clone());
-        let user_repo = UserRepository::new(pool.clone());
+        let listener = TcpListener::bind(configuration.bind_addr)
+            .await
+            .expect("Failed to bind");
 
-        let post_service = Arc::new(PostService::new(post_repo.clone()));
-        let comment_service =
-            Arc::new(CommentService::new(post_repo.clone(), comment_repo.clone()));
-        let user_service = Arc::new(UserService::new(user_repo.clone()));
+        configuration.bind_addr = SocketAddr::from_str(&format!(
+            "127.0.0.1:{}",
+            listener.local_addr().unwrap().port()
+        ))
+        .unwrap();
 
-        let state = AppState {
-            post_service,
-            comment_service,
-            configuration: Arc::new(configuration),
-            pool,
-            user_service,
-        };
+        let app_info = configuration.clone().into();
+        let join_handle = tokio::spawn(async move { run_app(listener, pool, app_info).await });
+
+        let reqwest_clinet = reqwest::Client::new();
 
         Self {
-            _post_repo: Arc::new(post_repo),
-            _user_repo: Arc::new(user_repo),
-            _comment_repo: Arc::new(comment_repo),
-            state,
+            _join_handle: join_handle,
+            configuration,
+            reqwest_client: reqwest_clinet,
         }
     }
 
-    pub fn app(&self) -> Router {
-        rustboard_api::router::create_router(self.state.clone())
+    fn url(&self, uri: &str) -> String {
+        format!("http://{}{}", self.configuration.bind_addr, uri)
+    }
+
+    pub async fn post_json(
+        &self,
+        uri: &str,
+        token: Option<&str>,
+        json: &serde_json::Value,
+    ) -> Response {
+        let mut request = self.reqwest_client.post(self.url(uri)).json(json);
+
+        if let Some(token) = token {
+            request = request.bearer_auth(token);
+        }
+
+        request.send().await.expect("POST 요청 실패")
+    }
+
+    pub async fn delete(&self, uri: &str, token: Option<&str>) -> Response {
+        let mut request = self.reqwest_client.delete(self.url(uri));
+
+        if let Some(token) = token {
+            request = request.bearer_auth(token);
+        }
+
+        request.send().await.expect("DELETE 요청 실패")
+    }
+
+    pub async fn get(&self, uri: &str, token: Option<&str>) -> (StatusCode, serde_json::Value) {
+        let mut request = self.reqwest_client.get(self.url(uri));
+
+        if let Some(token) = token {
+            request = request.bearer_auth(token);
+        }
+
+        let response = request.send().await.expect("GET 요청 실패");
+        let status_code = response.status();
+        let json_body = response.json().await.expect("JSON 파싱 실패");
+
+        (status_code, json_body)
+    }
+
+    pub async fn patch_json(
+        &self,
+        uri: &str,
+        token: Option<&str>,
+        json: &serde_json::Value,
+    ) -> (StatusCode, serde_json::Value) {
+        let mut request = self.reqwest_client.patch(self.url(uri)).json(json);
+
+        if let Some(token) = token {
+            request = request.bearer_auth(token);
+        }
+
+        let response = request.send().await.expect("PATCH 요청 실패");
+        let status_code = response.status();
+        let json_body = response.json().await.expect("JSON 파싱 실패");
+
+        (status_code, json_body)
     }
 
     /// 회원 가입과 로그인을 한 후 토큰을 반환한다.
     pub async fn signup_and_login(&self) -> Option<String> {
-        // 회원가입
-        let signup_req = Request::builder()
-            .uri("/signup")
-            .method(Method::POST)
-            .header(header::CONTENT_TYPE, "application/json")
-            .body(Body::from(
-                serde_json::to_string(&json!({
+        // 회원 가입
+        let response = self
+            .post_json(
+                "/signup",
+                None,
+                &json!({
                     "email": "test@example.com",
                     "password": "password123",
                     "display_name": "Tester",
-                }))
-                .unwrap(),
-            ))
-            .unwrap();
+                }),
+            )
+            .await;
 
-        let response = self.app().oneshot(signup_req).await.unwrap();
         assert_eq!(response.status(), StatusCode::CREATED);
 
         // 로그인
-        let login_req = Request::builder()
-            .uri("/login")
-            .method(Method::POST)
-            .header(header::CONTENT_TYPE, "application/json")
-            .body(Body::from(
-                serde_json::to_string(&json!({
+        let response = self
+            .post_json(
+                "/login",
+                None,
+                &json!({
                     "email": "test@example.com",
                     "password": "password123",
-                }))
-                .unwrap(),
-            ))
-            .unwrap();
+                }),
+            )
+            .await;
 
-        let response = self.app().oneshot(login_req).await.unwrap();
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
-            .await
-            .unwrap();
-        let response = serde_json::from_slice::<Value>(&body).unwrap();
-
-        response["token"].as_str().map(String::from)
+        let json_body = response_json(response).await;
+        json_body["token"].as_str().map(String::from)
     }
 
     /// 글을 주입한다
-    pub async fn seed_post(&self, posts: &[CreatePostInput], token: &str) -> Vec<Response<Body>> {
-        let requests = posts.into_iter().map(|post| {
-            post_json(
-                "/posts",
-                &json!({
-                    "title": &post.title,
-                    "content": &post.content,
-                }),
-            )
-        });
-
+    pub async fn seed_post(&self, posts: &[CreatePostInput], token: &str) -> Vec<Response> {
         let mut responses = Vec::new();
-        for request in requests {
+        for post in posts {
             let response = self
-                .app()
-                .oneshot(with_token(request, token))
-                .await
-                .unwrap();
+                .post_json(
+                    "/posts",
+                    Some(token),
+                    &serde_json::json!({
+                        "title": post.title,
+                        "content": post.content,
+                    }),
+                )
+                .await;
             responses.push(response);
         }
         responses
@@ -145,13 +183,12 @@ fn get_test_configuration() -> Settings {
         jwt_secret: "test-secret-key-for-testing-only".to_string(),
         jwt_expiration_minutes: 15,
         service_name: "rustboard-api-test".to_string(),
-        bind_addr: "127.0.0.1:3000".parse().unwrap(),
+        bind_addr: "127.0.0.1:0".parse().unwrap(),
         otel_exporter_otlp_endpoint: "http://localhost:4317".to_string(),
     }
 }
 
-async fn create_test_db() -> Settings {
-    let configuration = get_test_configuration();
+async fn create_test_db(configuration: &Settings) {
     let pool = PgPoolOptions::new()
         .max_connections(5)
         .connect(&format!(
@@ -180,54 +217,10 @@ async fn create_test_db() -> Settings {
         .run(&db_pool)
         .await
         .expect("DB 마이그레이션 실패");
-
-    configuration
-}
-
-pub fn get(uri: &str) -> Request<Body> {
-    Request::builder().uri(uri).body(Body::empty()).unwrap()
-}
-
-pub fn post_json(uri: &str, body: &serde_json::Value) -> Request<Body> {
-    Request::builder()
-        .method(Method::POST)
-        .uri(uri)
-        .header(header::CONTENT_TYPE, "application/json")
-        .body(Body::from(serde_json::to_string(body).unwrap()))
-        .unwrap()
-}
-
-pub fn patch_json(uri: &str, body: &serde_json::Value) -> Request<Body> {
-    Request::builder()
-        .method(Method::PATCH)
-        .uri(uri)
-        .header(header::CONTENT_TYPE, "application/json")
-        .body(Body::from(serde_json::to_string(body).unwrap()))
-        .unwrap()
-}
-
-pub fn delete(uri: &str) -> Request<Body> {
-    Request::builder()
-        .method(Method::DELETE)
-        .uri(uri)
-        .body(Body::empty())
-        .unwrap()
-}
-
-pub fn with_token(mut request: Request<Body>, token: &str) -> Request<Body> {
-    request.headers_mut().insert(
-        header::AUTHORIZATION,
-        format!("Bearer {}", token).parse().unwrap(),
-    );
-
-    request
 }
 
 pub async fn response_json(response: Response) -> serde_json::Value {
-    let body = axum::body::to_bytes(response.into_body(), usize::MAX)
-        .await
-        .unwrap();
-    serde_json::from_slice(&body).unwrap()
+    response.json().await.expect("JSON 파싱 실패")
 }
 
 // pub async fn response_text(response: Response) -> String {

@@ -1,5 +1,10 @@
+use tokio::sync::broadcast;
+
 use crate::{
-    domain::comment::{Comment, CreateCommentInput},
+    domain::{
+        comment::{Comment, CreateCommentInput},
+        notification::Notification,
+    },
     repository::{comment::CommentRepository, post::PostRepository},
     service::error::ServiceError,
 };
@@ -7,13 +12,19 @@ use crate::{
 pub struct CommentService {
     posts_repo: PostRepository,
     comments_repo: CommentRepository,
+    notify_tx: broadcast::Sender<Notification>,
 }
 
 impl CommentService {
-    pub fn new(posts_repo: PostRepository, comments_repo: CommentRepository) -> Self {
+    pub fn new(
+        posts_repo: PostRepository,
+        comments_repo: CommentRepository,
+        notify_tx: broadcast::Sender<Notification>,
+    ) -> Self {
         Self {
             posts_repo,
             comments_repo,
+            notify_tx,
         }
     }
 

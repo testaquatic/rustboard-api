@@ -15,6 +15,7 @@ use crate::{
 #[utoipa::path(
     description = "댓글 생성",
     post,
+    security(("AuthUser" = ["write:comments"])),
     path = "/posts/{post_id}/comments",
     params(
         ("post_id", description = "게시글 id")

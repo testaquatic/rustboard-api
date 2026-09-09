@@ -4,8 +4,6 @@ use utoipa::{OpenApi, ToSchema};
 
 use crate::state::AppState;
 
-const VERSION: &str = env!("CARGO_PKG_VERSION");
-
 #[derive(Serialize, ToSchema)]
 pub struct HealthResponse {
     status: &'static str,
@@ -34,7 +32,7 @@ pub async fn health(State(state): State<AppState>) -> (StatusCode, Json<HealthRe
             StatusCode::SERVICE_UNAVAILABLE,
             Json(HealthResponse {
                 status: "db_unavailable",
-                service: state.configuration.service_name.clone(),
+                service: state.app_info.service_name.clone(),
             }),
         );
     }
@@ -43,7 +41,7 @@ pub async fn health(State(state): State<AppState>) -> (StatusCode, Json<HealthRe
         StatusCode::OK,
         Json(HealthResponse {
             status: "ok",
-            service: state.configuration.service_name.clone(),
+            service: state.app_info.service_name.clone(),
         }),
     )
 }
@@ -51,7 +49,7 @@ pub async fn health(State(state): State<AppState>) -> (StatusCode, Json<HealthRe
 #[derive(Serialize, ToSchema)]
 pub struct VersionResponse {
     service: String,
-    version: &'static str,
+    version: String,
 }
 
 #[utoipa::path(
@@ -61,15 +59,15 @@ pub struct VersionResponse {
     responses(
         (status = 200, description = "ok", body = VersionResponse, example = json!(VersionResponse{
             service: "rustboard-api".to_string(),
-            version: VERSION,
+            version: env!("CARGO_PKG_VERSION").to_string(),
         }))
     ),
     tags=["meta"]
 )]
 pub async fn version(State(state): State<AppState>) -> Json<VersionResponse> {
     Json(VersionResponse {
-        service: state.configuration.service_name.clone(),
-        version: VERSION,
+        service: state.app_info.service_name.clone(),
+        version: state.app_info.service_version.clone(),
     })
 }
 

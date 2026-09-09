@@ -1,4 +1,4 @@
-#[derive(serde::Deserialize, serde::Serialize, Debug)]
+#[derive(serde::Deserialize, serde::Serialize, Debug, Clone)]
 pub struct Notification {
     /// 이벤트의 종류: "comment_added", "comment_deleted" 등
     #[serde(rename = "type")]

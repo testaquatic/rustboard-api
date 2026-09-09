@@ -141,6 +141,7 @@ pub async fn get_post(
 #[utoipa::path(
     description = "새로운 게시글을 작성한다.",
     post,
+    security(("AuthUser" = ["write:posts"])),
     path = "/posts",
     request_body = CreatePostInput,
     responses(
@@ -166,6 +167,7 @@ pub async fn create_post(
 #[utoipa::path(
     description = "특정 id를 가진 게시글을 수정한다.",
     patch,
+    security(("AuthUser" = ["edit:posts"])),
     path = "/posts/{id}",
     params(
         ("id", description = "게시글 id")
@@ -201,6 +203,7 @@ pub async fn update_post(
 #[utoipa::path(
     description = "특정 id를 가진 게시글을 삭제한다.",
     delete,
+    security(("AuthUser" = ["delete:posts"])),
     path = "/posts/{id}",
     params(
         ("id", description = "게시글 id")

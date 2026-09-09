@@ -66,7 +66,9 @@ utoipa-swagger-ui = { version = "9", features = ["axum"] }
 
 # UUID
 uuid = { version = "1", features = ["v4"] }
+secrecy = { version = "0.10", features = ["serde"] }
 
 [dev-dependencies]
 # JSON 구조 검사
 insta = { version = "1", features = ["json", "redactions"] }
+reqwest = { version = "0.13", features = ["json"] }

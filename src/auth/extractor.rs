@@ -1,5 +1,6 @@
 use axum::{extract::FromRequestParts, http::header};
 use jsonwebtoken::{DecodingKey, Validation, decode};
+use secrecy::ExposeSecret;
 
 use crate::{auth::jwt::Claims, domain::role::Role, error::AppError, state::AppState};
 
@@ -49,7 +50,7 @@ impl FromRequestParts<AppState> for AuthUser {
         // 토큰 디코딩 및 검증
         let token_data = decode(
             token,
-            &DecodingKey::from_secret(state.configuration.jwt_secret.as_bytes()),
+            &DecodingKey::from_secret(state.app_info.jwt_secret.expose_secret().as_bytes()),
             &Validation::new(jsonwebtoken::Algorithm::HS256),
         )
         .map_err(|e| {
@@ -88,7 +89,7 @@ impl FromRequestParts<AppState> for OptionalAuthUser {
         // 토큰 디코딩 및 검증
         let token_data = decode(
             token,
-            &DecodingKey::from_secret(state.configuration.jwt_secret.as_bytes()),
+            &DecodingKey::from_secret(state.app_info.jwt_secret.expose_secret().as_bytes()),
             &Validation::new(jsonwebtoken::Algorithm::HS256),
         );
 

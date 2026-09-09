@@ -2,7 +2,6 @@ use axum::http::StatusCode;
 use insta::assert_json_snapshot;
 use rustboard_api::domain::post::CreatePostInput;
 use serde_json::json;
-use tower::ServiceExt;
 
 use crate::common;
 
@@ -15,25 +14,20 @@ async fn snapshot_create_post_response() {
 
     // 글 작성
     let response = ctx
-        .app()
-        .oneshot(common::with_token(
-            common::post_json(
-                "/posts",
-                &json!({
-                    "title": "스냅샷 테스트 글",
-                    "content": "이 응답 구조를 고정합니다"
-                }),
-            ),
-            &token,
-        ))
-        .await
-        .expect("Failed to send request");
+        .post_json(
+            "/posts",
+            Some(&token),
+            &json!({
+                "title": "스냅샷 테스트 글",
+                "content": "이 응답 구조를 고정합니다"
+            }),
+        )
+        .await;
     assert_eq!(response.status(), StatusCode::CREATED);
-
-    let json = common::response_json(response).await;
+    let json_body = common::response_json(response).await;
 
     // 변동 필드를 redaction으로 치환
-    assert_json_snapshot!(json, {
+    assert_json_snapshot!(json_body, {
         ".author_id" => "[author_id]",
         ".id" => "[id]",
         ".user_id" => "[id]",
@@ -47,35 +41,30 @@ async fn snapshot_unauthorized_error() {
     let ctx = common::TestContext::new().await;
 
     let response = ctx
-        .app()
-        .oneshot(common::post_json(
+        .post_json(
             "/posts",
+            None,
             &json!(
                 {
                     "title": "No Token",
-                    "content": "실패",
+                    "content": "실패"
                 }
             ),
-        ))
-        .await
-        .unwrap();
-    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+        )
+        .await;
 
-    let json = common::response_json(response).await;
-    assert_json_snapshot!("error_unauthorized", json);
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    let json_body = common::response_json(response).await;
+
+    assert_json_snapshot!("error_unauthorized", json_body);
 }
 
 #[tokio::test]
 async fn snapshot_not_found_error() {
     let ctx = common::TestContext::new().await;
 
-    let response = ctx
-        .app()
-        .oneshot(common::get("/posts/999999"))
-        .await
-        .unwrap();
-    assert_eq!(response.status(), StatusCode::NOT_FOUND);
-    let json = common::response_json(response).await;
+    let (status, json) = ctx.get("/posts/999999", None).await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
     assert_json_snapshot!("error_not_found", json);
 }
 
@@ -101,10 +90,9 @@ async fn snapshot_list_posts() {
     .await;
 
     // 목록 조회
-    let response = ctx.app().oneshot(common::get("/posts")).await.unwrap();
-    assert_eq!(response.status(), StatusCode::OK);
+    let (status, json) = ctx.get("/posts", None).await;
+    assert_eq!(status, StatusCode::OK);
 
-    let json = common::response_json(response).await;
     assert_json_snapshot!(json, {
         ".items[].author_id" => "[author_id]",
         ".items[].id" => "[id]",

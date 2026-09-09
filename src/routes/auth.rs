@@ -1,4 +1,5 @@
 use axum::{Json, extract::State, http::StatusCode};
+use secrecy::ExposeSecret;
 use serde::Serialize;
 use utoipa::{
     Modify, OpenApi,
@@ -65,8 +66,8 @@ pub async fn login(
 
     let token = jwt::create_token(
         &user,
-        &state.configuration.jwt_secret,
-        state.configuration.jwt_expiration_minutes,
+        &state.app_info.jwt_secret.expose_secret(),
+        state.app_info.jwt_expiration_minutes,
     )
     .map_err(|e| AppError::Internal(anyhow::anyhow!("토큰 생성 실패: {e}")))?;
 

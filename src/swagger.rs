@@ -18,12 +18,9 @@ pub fn get_swagger_router(app_state: AppState) -> axum::Router {
     let mut api = OpenApiBuilder::new()
         .info(
             Info::builder()
-                .title(app_state.configuration.service_name.as_str())
+                .title(app_state.app_info.service_name.as_str())
                 .version(VERSION)
-                .description(Some(format!(
-                    "{} swagger",
-                    app_state.configuration.service_name
-                )))
+                .description(Some(format!("{} swagger", app_state.app_info.service_name)))
                 .build(),
         )
         .build();
