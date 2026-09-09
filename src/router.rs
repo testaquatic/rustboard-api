@@ -4,13 +4,14 @@ use axum::{
 };
 
 use crate::{
-    middleware::auth::require_auth,
-    routes::{
+    handler::{
         auth::{login, me, signup},
         comment::{create_comment, list_comments},
         meta::{health, version},
         post::{create_post, delete_post, get_post, list_posts, update_post},
+        ws::ws_notifications,
     },
+    middleware::auth::require_auth,
     state::AppState,
     swagger::get_swagger_router,
 };
@@ -37,11 +38,19 @@ pub fn protected_routes(state: AppState) -> Router<AppState> {
         .route_layer(middleware::from_fn_with_state(state, require_auth))
 }
 
+/// ws 라우트
+pub fn ws_routes(state: AppState) -> Router<AppState> {
+    Router::new()
+        .route("/ws/notifications", get(ws_notifications))
+        .route_layer(middleware::from_fn_with_state(state, require_auth))
+}
+
 pub fn create_router(state: AppState) -> Router {
     // 라우터를 만들고 상태 붙이기
     Router::new()
         .merge(public_routes())
         .merge(protected_routes(state.clone()))
+        .merge(ws_routes(state.clone()))
         .with_state(state.clone())
         .merge(get_swagger_router(state))
 }

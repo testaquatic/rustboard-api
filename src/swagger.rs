@@ -5,7 +5,7 @@ use utoipa::{
 use utoipa_swagger_ui::SwaggerUi;
 
 use crate::{
-    routes::{
+    handler::{
         auth::AuthOpenApiDoc, comment::CommentOpenApiDoc, meta::MetaOpenApiDoc,
         post::PostOpenApiDoc,
     },

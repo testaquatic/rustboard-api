@@ -32,7 +32,7 @@ impl CommentService {
         &self,
         post_id: i64,
         input: CreateCommentInput,
-        _author_id: i64,
+        actor_name: &str,
     ) -> Result<Comment, ServiceError> {
         if input.body.trim().is_empty() {
             return Err(ServiceError::Validation("댓글이 비어 있습니다".to_string()));
@@ -48,6 +48,18 @@ impl CommentService {
         }
 
         let comment = self.comments_repo.insert(post_id, input).await?;
+
+        // 댓글 생성 알림 발생 (수신자가 없어도 무시)
+        let _ = self.notify_tx.send(Notification {
+            event_type: "comment_added".to_string(),
+            post_id,
+            comment_id: Some(comment.id),
+            actor: actor_name.to_string(),
+            message: format!(
+                "{}님이 {}번 게시글에 댓글을 달았습니다",
+                actor_name, post_id
+            ),
+        });
 
         Ok(comment)
     }

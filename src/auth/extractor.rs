@@ -7,6 +7,7 @@ use crate::{auth::jwt::Claims, domain::role::Role, error::AppError, state::AppSt
 #[derive(Debug, Clone)]
 pub struct AuthUser {
     pub user_id: i64,
+    pub name: String,
     pub email: String,
     pub role: Role,
 }
@@ -18,6 +19,7 @@ impl AuthUser {
 
         Ok(AuthUser {
             user_id,
+            name: claims.name,
             email: claims.email,
             role,
         })

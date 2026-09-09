@@ -17,13 +17,12 @@ axum = { version = "0.8", features = ["ws"] }
 
 # 날짜/시간
 chrono = { version = "0.4", features = ["serde"] }
-
 # configuration
 config = "0.15"
-
+# futures_util
+futures-util = "0.3"
 # JWT
 jsonwebtoken = { version = "11", features = ["rust_crypto"] }
-
 # OpenTelemetry
 opentelemetry = "0.32"
 opentelemetry-otlp = { version = "0.32", features = ["grpc-tonic"] }
@@ -64,9 +63,9 @@ utoipa = { version = "5", features = ["chrono"] }
 utoipa-axum = "0.2"
 utoipa-swagger-ui = { version = "9", features = ["axum"] }
 
+secrecy = { version = "0.10", features = ["serde"] }
 # UUID
 uuid = { version = "1", features = ["v4"] }
-secrecy = { version = "0.10", features = ["serde"] }
 
 [dev-dependencies]
 # JSON 구조 검사

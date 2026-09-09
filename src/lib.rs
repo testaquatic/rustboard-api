@@ -6,7 +6,7 @@ pub mod metrics;
 pub mod middleware;
 pub mod repository;
 pub mod router;
-pub mod routes;
+pub mod handler;
 pub mod service;
 pub mod shutdown;
 pub mod startup;

@@ -66,7 +66,7 @@ pub async fn login(
 
     let token = jwt::create_token(
         &user,
-        &state.app_info.jwt_secret.expose_secret(),
+        state.app_info.jwt_secret.expose_secret(),
         state.app_info.jwt_expiration_minutes,
     )
     .map_err(|e| AppError::Internal(anyhow::anyhow!("토큰 생성 실패: {e}")))?;

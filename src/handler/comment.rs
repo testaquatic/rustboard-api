@@ -46,7 +46,7 @@ pub async fn create_comment(
 ) -> Result<(StatusCode, Json<CommentResponse>), AppError> {
     let comment = state
         .comment_service
-        .create(post_id, input, auth_user.user_id)
+        .create(post_id, input, &auth_user.name)
         .await?;
 
     Ok((StatusCode::CREATED, Json(CommentResponse::from(comment))))

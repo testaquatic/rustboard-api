@@ -27,7 +27,7 @@ async fn main() -> Result<(), anyhow::Error> {
         listener.local_addr()?
     );
 
-    startup::run_app(listener, pool.clone(), configuration.clone().into()).await?;
+    startup::run_app(listener, pool.clone(), configuration.into()).await?;
 
     Ok(())
 }
