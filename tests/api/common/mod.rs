@@ -1,6 +1,10 @@
 use std::{net::SocketAddr, str::FromStr};
 
 use axum::http::StatusCode;
+use futures_util::{
+    StreamExt,
+    stream::{SplitSink, SplitStream},
+};
 use reqwest::Response;
 use rustboard_api::{
     configuration::{DatabaseSettings, Settings},
@@ -11,6 +15,8 @@ use rustboard_api::{
 use serde_json::json;
 use sqlx::{QueryBuilder, postgres::PgPoolOptions};
 use tokio::{net::TcpListener, task::JoinHandle};
+use tokio_tungstenite::WebSocketStream;
+use tungstenite::client::IntoClientRequest;
 use uuid::Uuid;
 
 pub struct TestContext {
@@ -168,6 +174,34 @@ impl TestContext {
             responses.push(response);
         }
         responses
+    }
+
+    /// WS 클라이언트를 얻는다.
+    pub async fn connect_ws(
+        &self,
+        token: &str,
+        uri: &str,
+    ) -> (
+        SplitSink<
+            WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>,
+            tokio_tungstenite::tungstenite::Message,
+        >,
+        SplitStream<WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>>,
+    ) {
+        let mut request = format!("ws://{}{}", self.configuration.bind_addr, uri)
+            .into_client_request()
+            .unwrap();
+        request.headers_mut().insert(
+            "Authorization",
+            format!("Bearer {}", token).parse().unwrap(),
+        );
+        let (ws_stream, _) = tokio_tungstenite::connect_async(request)
+            .await
+            .expect("WS 연결 실패");
+
+        let (write, read) = ws_stream.split();
+
+        (write, read)
     }
 }
 

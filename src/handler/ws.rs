@@ -9,9 +9,17 @@ use axum::{
 };
 use futures_util::{SinkExt, StreamExt};
 use tokio::sync::RwLock;
+use utoipa::OpenApi;
 
 use crate::{auth::extractor::AuthUser, domain::notification::ClientMessage, state::AppState};
 
+#[utoipa::path(
+    description = "웹소켓을 통해서 실시간으로 알림을 받는다",
+    get,
+    path = "/ws/notifications",
+    security(("AuthUser" = ["read:notifications"])),
+    tags = ["notifications"]
+)]
 pub async fn ws_notifications(
     ws: WebSocketUpgrade,
     State(app_state): State<AppState>,
@@ -19,6 +27,13 @@ pub async fn ws_notifications(
 ) -> Response {
     ws.on_upgrade(move |socket| handle_notifications(socket, app_state, auth_user))
 }
+
+#[derive(OpenApi)]
+#[openapi(
+    paths(ws_notifications),
+    tags((name = "notifications", description = "알림 API"))
+)]
+pub struct WsOpenApiDoc;
 
 async fn handle_notifications(socket: WebSocket, state: AppState, auth_user: AuthUser) {
     let (mut sender, mut receiver) = socket.split();

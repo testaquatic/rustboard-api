@@ -15,7 +15,7 @@ pub struct Notification {
 }
 
 /// 클라이언트에서 보내는 메시지
-#[derive(serde::Deserialize, Debug, Clone)]
+#[derive(serde::Deserialize, serde::Serialize, Debug, Clone)]
 #[serde(tag = "action")]
 pub enum ClientMessage {
     #[serde(rename = "subscribe")]

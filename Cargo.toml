@@ -1,6 +1,6 @@
 [package]
 name = "rustboard-api"
-version = "0.3.0"
+version = "0.4.0"
 edition = "2024"
 
 [dependencies]
@@ -46,7 +46,7 @@ sqlx = { version = "0.8", features = ["chrono", "postgres", "runtime-tokio"] }
 thiserror = "2"
 
 # Async runtime
-tokio = { version = "1", features = ["macros", "parking_lot", "rt-multi-thread", "signal"] }
+tokio = { version = "1", features = ["io-util", "macros", "parking_lot", "rt-multi-thread", "signal"] }
 
 # Middleware
 tower = "0.5"
@@ -70,4 +70,8 @@ uuid = { version = "1", features = ["v4"] }
 [dev-dependencies]
 # JSON 구조 검사
 insta = { version = "1", features = ["json", "redactions"] }
+# http 요청
 reqwest = { version = "0.13", features = ["json"] }
+# WS 클라이언트
+tokio-tungstenite = { version = "0.30", features = ["tokio-rustls"] }
+tungstenite = "0.30"

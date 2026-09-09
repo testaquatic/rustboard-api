@@ -58,7 +58,7 @@ pub async fn run_app(
 
     let governor_conf = GovernorConfigBuilder::default()
         .per_second(10)
-        .burst_size(30)
+        .burst_size(1000)
         .key_extractor(ForwardedIpKeyExtractor)
         .finish()
         .unwrap();
