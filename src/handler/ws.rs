@@ -8,7 +8,7 @@ use axum::{
     response::Response,
 };
 use futures_util::{SinkExt, StreamExt};
-use tokio::sync::RwLock;
+use tokio::sync::{RwLock, broadcast};
 use utoipa::OpenApi;
 
 use crate::{auth::extractor::AuthUser, domain::notification::ClientMessage, state::AppState};
@@ -76,16 +76,28 @@ async fn handle_notifications(socket: WebSocket, state: AppState, auth_user: Aut
 
     // 송신 태스크: broadcast에서 알림을 받아 클라이언트에 전달
     let mut send_task = tokio::spawn(async move {
-        while let Ok(notification) = notify_rx.recv().await {
-            // 구독중인 게시글의 알림만 전달
-            let is_subscribed = {
-                let subs = subs_for_send.read().await;
-                subs.contains(&notification.post_id)
-            };
+        loop {
+            match notify_rx.recv().await {
+                Ok(notification) => {
+                    // 정상 전달
+                    let is_subscribed = {
+                        let subs = subs_for_send.read().await;
+                        subs.contains(&notification.post_id)
+                    };
 
-            if is_subscribed {
-                let json = serde_json::to_string(&notification).unwrap_or_default();
-                if sender.send(Message::Text(json.into())).await.is_err() {
+                    if is_subscribed {
+                        let json = serde_json::to_string(&notification).unwrap_or_default();
+                        if sender.send(Message::Text(json.into())).await.is_err() {
+                            break;
+                        }
+                    }
+                }
+                Err(broadcast::error::RecvError::Lagged(n)) => {
+                    tracing::warn!(missing = n, "느린 소비자: {n}개 알림 누락");
+                    // 계속 진행 - 이후 메시지부터 받음
+                }
+                Err(broadcast::error::RecvError::Closed) => {
+                    // 채널 닫힘
                     break;
                 }
             }
