@@ -3,11 +3,11 @@ use insta::assert_json_snapshot;
 use rustboard_api::domain::post::CreatePostInput;
 use serde_json::json;
 
-use crate::common;
+use crate::common::test_context::{TestContext, response_json};
 
 #[tokio::test]
 async fn snapshot_create_post_response() {
-    let ctx = common::TestContext::new().await;
+    let ctx = TestContext::new().await;
 
     // 회원가입과 로그인
     let token = ctx.signup_and_login().await.unwrap();
@@ -24,7 +24,7 @@ async fn snapshot_create_post_response() {
         )
         .await;
     assert_eq!(response.status(), StatusCode::CREATED);
-    let json_body = common::response_json(response).await;
+    let json_body = response_json(response).await;
 
     // 변동 필드를 redaction으로 치환
     assert_json_snapshot!(json_body, {
@@ -38,7 +38,7 @@ async fn snapshot_create_post_response() {
 
 #[tokio::test]
 async fn snapshot_unauthorized_error() {
-    let ctx = common::TestContext::new().await;
+    let ctx = TestContext::new().await;
 
     let response = ctx
         .post_json(
@@ -54,14 +54,14 @@ async fn snapshot_unauthorized_error() {
         .await;
 
     assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
-    let json_body = common::response_json(response).await;
+    let json_body = response_json(response).await;
 
     assert_json_snapshot!("error_unauthorized", json_body);
 }
 
 #[tokio::test]
 async fn snapshot_not_found_error() {
-    let ctx = common::TestContext::new().await;
+    let ctx = TestContext::new().await;
 
     let (status, json) = ctx.get("/posts/999999", None).await;
     assert_eq!(status, StatusCode::NOT_FOUND);
@@ -70,7 +70,7 @@ async fn snapshot_not_found_error() {
 
 #[tokio::test]
 async fn snapshot_list_posts() {
-    let ctx = common::TestContext::new().await;
+    let ctx = TestContext::new().await;
     let token = ctx.signup_and_login().await.unwrap();
 
     // 글 2개 작성

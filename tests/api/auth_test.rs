@@ -1,11 +1,11 @@
 use axum::http::StatusCode;
 use serde_json::json;
 
-use crate::common;
+use crate::common::test_context::TestContext;
 
 #[tokio::test]
 async fn signup_duplicate_email_returns_422() {
-    let ctx = common::TestContext::new().await;
+    let ctx = TestContext::new().await;
 
     // 첫 회원가입
     let response = ctx

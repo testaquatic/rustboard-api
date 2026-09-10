@@ -1,12 +1,12 @@
 use axum::http::StatusCode;
 use serde_json::json;
 
-use crate::common;
+use crate::common::test_context::{TestContext, response_json};
 
 #[tokio::test]
 async fn full_auth_flow() {
     // 테스트 환경 구성
-    let test_context = common::TestContext::new().await;
+    let test_context = TestContext::new().await;
 
     // 회원 가입 - Alice
     let response = test_context
@@ -50,7 +50,7 @@ async fn full_auth_flow() {
         )
         .await;
     assert_eq!(response.status(), StatusCode::OK);
-    let json_body = common::response_json(response).await;
+    let json_body = response_json(response).await;
     let alice_token = json_body["token"].as_str().unwrap();
 
     // 로그인 - Bob
@@ -65,7 +65,7 @@ async fn full_auth_flow() {
         )
         .await;
     assert_eq!(response.status(), StatusCode::OK);
-    let json_body = common::response_json(response).await;
+    let json_body = response_json(response).await;
     let bob_token = json_body["token"].as_str().unwrap();
 
     // 비인증 글 작성 시도
@@ -87,7 +87,7 @@ async fn full_auth_flow() {
         )
         .await;
     assert_eq!(response.status(), StatusCode::CREATED);
-    let json_body = common::response_json(response).await;
+    let json_body = response_json(response).await;
     let post_id = json_body["id"].as_i64().unwrap();
 
     // 비인증 글 조회
@@ -133,7 +133,7 @@ async fn full_auth_flow() {
 
 #[tokio::test]
 async fn test_signup_duplicate_email() {
-    let test_context = common::TestContext::new().await;
+    let test_context = TestContext::new().await;
 
     // 회원 가입 - Tester
     let response = test_context
@@ -166,7 +166,7 @@ async fn test_signup_duplicate_email() {
 
 #[tokio::test]
 async fn test_login_invalid_credentials() {
-    let test_context = common::TestContext::new().await;
+    let test_context = TestContext::new().await;
 
     // 회원 가입
     test_context

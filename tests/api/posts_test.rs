@@ -2,7 +2,7 @@ use axum::http::StatusCode;
 use rustboard_api::domain::post::CreatePostInput;
 use serde_json::json;
 
-use crate::common::{self, TestContext};
+use crate::common::test_context::{TestContext, response_json};
 
 #[tokio::test]
 async fn create_post_without_token_returns_401() {
@@ -52,7 +52,7 @@ async fn get_post_returns_correct_fields() {
 
 #[tokio::test]
 async fn signup_then_login_then_create_post() {
-    let ctx = common::TestContext::new().await;
+    let ctx = TestContext::new().await;
 
     // 회원가입
     let response = ctx
@@ -82,7 +82,7 @@ async fn signup_then_login_then_create_post() {
         .await;
 
     assert_eq!(response.status(), StatusCode::OK);
-    let json_body = common::response_json(response).await;
+    let json_body = response_json(response).await;
     let token = json_body["token"].as_str().unwrap();
 
     // 글 작성
@@ -101,7 +101,7 @@ async fn signup_then_login_then_create_post() {
 
 #[tokio::test]
 async fn list_returns_empty_when_no_posts() {
-    let ctx = common::TestContext::new().await;
+    let ctx = TestContext::new().await;
 
     let (status_code, json_body) = ctx.get("/posts", None).await;
 
@@ -112,7 +112,7 @@ async fn list_returns_empty_when_no_posts() {
 
 #[tokio::test]
 async fn list_returns_seeded_posts() {
-    let ctx = common::TestContext::new().await;
+    let ctx = TestContext::new().await;
 
     // 회원 가입과 로그인
     let token = ctx.signup_and_login().await.unwrap();
@@ -143,7 +143,7 @@ async fn list_returns_seeded_posts() {
 #[tokio::test]
 async fn owner_can_delete_own_post() {
     // 회원가입과 로그인
-    let ctx = common::TestContext::new().await;
+    let ctx = TestContext::new().await;
     let token = ctx.signup_and_login().await.unwrap();
 
     // 글 작성
@@ -159,7 +159,7 @@ async fn owner_can_delete_own_post() {
     assert_eq!(response.len(), 1);
 
     let response = response.pop().expect("응답이 없음");
-    let json_body = common::response_json(response).await;
+    let json_body = response_json(response).await;
     let post_id = json_body["id"].as_i64().unwrap();
 
     // 삭제

@@ -62,4 +62,3 @@ insta = { version = "1", features = ["json", "redactions"] }
 reqwest = { version = "0.13", features = ["json"] }
 # WS 클라이언트
 tokio-tungstenite = { version = "0.30", features = ["tokio-rustls"] }
-tungstenite = "0.30"

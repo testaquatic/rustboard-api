@@ -1,6 +1,6 @@
 use axum::http::StatusCode;
 
-use crate::common::TestContext;
+use crate::common::test_context::TestContext;
 
 #[tokio::test]
 async fn health_check_returns_200_and_ok() {
