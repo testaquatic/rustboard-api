@@ -29,36 +29,29 @@ opentelemetry-semantic-conventions = "0.32"
 password-hash = { version = "0.6", features = ["getrandom"] }
 # 정규 표현식
 regex = "1"
-
+# 민감한 정보 로깅 방지
+secrecy = { version = "0.10", features = ["serde"] }
 # Serialization
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-
 # 데이터베이스
 sqlx = { version = "0.8", features = ["chrono", "postgres", "runtime-tokio"] }
-
 # error handling
 thiserror = "2"
-
 # Async runtime
 tokio = { version = "1", features = ["io-util", "macros", "parking_lot", "rt-multi-thread", "signal"] }
-
 # Middleware
 tower = "0.5"
 tower_governor = "0.8"
 tower-http = { version = "0.7", features = ["compression-gzip", "cors", "timeout", "trace"] }
-
 # Logging
 tracing = "0.1"
 tracing-opentelemetry = "0.33"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
-
 # Swagger
 utoipa = { version = "5", features = ["chrono"] }
 utoipa-axum = "0.2"
 utoipa-swagger-ui = { version = "9", features = ["axum"] }
-
-secrecy = { version = "0.10", features = ["serde"] }
 # UUID
 uuid = { version = "1", features = ["v4"] }
 
