@@ -21,7 +21,10 @@ use tokio::{
 };
 use utoipa::OpenApi;
 
-use crate::{auth::extractor::AuthUser, domain::notification::ClientMessage, state::AppState};
+use crate::{
+    auth::extractor::AuthUser, domain::notification::ClientMessage, error::AppError,
+    state::AppState,
+};
 
 #[utoipa::path(
     description = "웹소켓을 통해서 실시간으로 알림을 받는다",
@@ -31,11 +34,20 @@ use crate::{auth::extractor::AuthUser, domain::notification::ClientMessage, stat
     tags = ["notifications"]
 )]
 pub async fn ws_notifications(
+    auth_user: AuthUser,
     ws: WebSocketUpgrade,
     State(app_state): State<AppState>,
-    auth_user: AuthUser,
-) -> Response {
-    ws.on_upgrade(move |socket| handle_notifications(socket, app_state, auth_user))
+) -> Result<Response, AppError> {
+    let permit = app_state
+        .ws_semaphore
+        .clone()
+        .try_acquire_owned()
+        .map_err(|_| AppError::TooManyConnections)?;
+
+    let response =
+        ws.on_upgrade(move |socket| handle_notifications(socket, app_state, auth_user, permit));
+
+    Ok(response)
 }
 
 #[derive(OpenApi)]
@@ -45,7 +57,15 @@ pub async fn ws_notifications(
 )]
 pub struct WsOpenApiDoc;
 
-async fn handle_notifications(socket: WebSocket, state: AppState, auth_user: AuthUser) {
+async fn handle_notifications(
+    socket: WebSocket,
+    state: AppState,
+    auth_user: AuthUser,
+    _permit: tokio::sync::OwnedSemaphorePermit,
+) {
+    // _permit는 이 함수가 끝나면 자동으로 드롭
+    // 드롭시 semaphore의 카운트가 증가하여 새로운 연결이 가능해진다
+
     let (mut sender, mut receiver) = socket.split();
     let mut notify_rx = state.notify_tx.subscribe();
 

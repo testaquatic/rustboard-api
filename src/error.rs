@@ -26,6 +26,8 @@ pub enum AppError {
     #[error("서버 내부 오류")]
     #[schema(value_type = ErrorBody)]
     Internal(#[source] anyhow::Error),
+    #[error("동시 연결 수 초과")]
+    TooManyConnections,
 }
 
 impl AppError {
@@ -97,6 +99,13 @@ impl IntoResponse for AppError {
                     "input validation failure"
                 )
             }
+            AppError::TooManyConnections => {
+                tracing::warn!(
+                    error.type = "too_many_connections",
+                    error.message = %self,
+                    "too many ws connections"
+                )
+            }
         }
 
         // HTTP 응답 생성
@@ -123,6 +132,11 @@ impl IntoResponse for AppError {
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "internal_error",
                 "서버 내부 오류가 발생했습니다".to_string(),
+            ),
+            AppError::TooManyConnections => (
+                StatusCode::SERVICE_UNAVAILABLE,
+                "too_many_connections",
+                "동시 연결 수 초과".to_string(),
             ),
         };
 

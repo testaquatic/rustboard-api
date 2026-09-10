@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use secrecy::SecretString;
-use tokio::sync::broadcast;
+use tokio::sync::{Semaphore, broadcast};
 
 use crate::{
     configuration::Settings,
@@ -12,12 +12,13 @@ use crate::{
 /// AppState 정의
 #[derive(Clone)]
 pub struct AppState {
+    pub app_info: Arc<AppInfo>,
     pub pool: sqlx::PgPool,
     pub post_service: Arc<PostService>,
     pub comment_service: Arc<CommentService>,
     pub user_service: Arc<UserService>,
     pub notify_tx: broadcast::Sender<Notification>,
-    pub app_info: Arc<AppInfo>,
+    pub ws_semaphore: Arc<Semaphore>,
 }
 
 #[derive(Clone)]

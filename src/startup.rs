@@ -2,7 +2,10 @@ use std::{net::SocketAddr, sync::Arc, time::Duration};
 
 use axum::{http::StatusCode, middleware};
 use sqlx::PgPool;
-use tokio::{net::TcpListener, sync::broadcast};
+use tokio::{
+    net::TcpListener,
+    sync::{Semaphore, broadcast},
+};
 use tower_governor::{GovernorLayer, governor::GovernorConfigBuilder};
 use tower_http::{
     compression::CompressionLayer, cors::CorsLayer, timeout::TimeoutLayer, trace::TraceLayer,
@@ -46,14 +49,17 @@ pub async fn run_app(
     ));
     let user_service = Arc::new(UserService::new(users_repo));
 
+    let ws_semaphore = Arc::new(Semaphore::new(1000));
+
     // AppState에 담기
     let state = AppState {
+        app_info: Arc::new(app_info),
         post_service,
         comment_service,
         pool: pool.clone(),
         user_service,
         notify_tx,
-        app_info: Arc::new(app_info),
+        ws_semaphore,
     };
 
     let governor_conf = GovernorConfigBuilder::default()
