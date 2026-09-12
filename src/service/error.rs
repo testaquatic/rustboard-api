@@ -18,5 +18,4 @@ pub enum ServiceError {
 
     #[error("권한이 없습니다")]
     Forbidden,
-
 }
