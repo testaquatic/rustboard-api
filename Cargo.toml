@@ -3,12 +3,11 @@ resolver = "3"
 members = [
   "api",
   "domain",
+  "notifier",
+  "proto",
 ]
 
 [workspace.dependencies]
-# domain
-rustboard-domain = { path = "domain" }
-
 # 오류
 anyhow = "1"
 # ARGON2 해싱
@@ -32,6 +31,8 @@ opentelemetry_sdk = "0.32"
 opentelemetry-semantic-conventions = "0.32"
 # 해싱
 password-hash = { version = "0.6", features = ["getrandom"] }
+# Protocol Buffer
+prost = "0.14"
 # 정규 표현식
 regex = "1"
 # 민감한 정보 로깅 방지
@@ -45,6 +46,9 @@ sqlx = { version = "0.8", features = ["chrono", "postgres", "runtime-tokio"] }
 thiserror = "2"
 # Async runtime
 tokio = { version = "1", features = ["io-util", "macros", "parking_lot", "rt-multi-thread", "signal"] }
+# gRPC
+tonic = "0.14"
+tonic-prost = "0.14"
 # Middleware
 tower = "0.5"
 tower_governor = "0.8"
@@ -67,3 +71,12 @@ insta = { version = "1", features = ["json", "redactions"] }
 reqwest = { version = "0.13", features = ["json"] }
 # WS 클라이언트
 tokio-tungstenite = { version = "0.30", features = ["tokio-rustls"] }
+
+### 빌드용 크레이트
+tonic-prost-build = "0.14"
+
+### 워크스페이스 라이브러리
+# domain
+rustboard-domain = { path = "domain" }
+# proto
+rustboard-proto = { path = "proto" }
