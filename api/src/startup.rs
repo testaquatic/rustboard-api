@@ -2,16 +2,14 @@ use std::{net::SocketAddr, sync::Arc, time::Duration};
 
 use axum::{http::StatusCode, middleware};
 use sqlx::PgPool;
-use tokio::{
-    net::TcpListener,
-    sync::{Semaphore, broadcast},
-};
+use tokio::net::TcpListener;
 use tower_governor::{GovernorLayer, governor::GovernorConfigBuilder};
 use tower_http::{
     compression::CompressionLayer, cors::CorsLayer, timeout::TimeoutLayer, trace::TraceLayer,
 };
 
 use crate::{
+    client::notification::NotificationClient,
     middleware::{
         ip_guard::IpGuardLayer, metrics::track_metrics,
         rate_limit_error::rate_limit_error_response, rate_limit_key::ForwardedIpKeyExtractor,
@@ -28,28 +26,32 @@ pub async fn run_app(
     listener: TcpListener,
     pool: PgPool,
     app_info: AppInfo,
+    notification_client: NotificationClient,
 ) -> Result<(), anyhow::Error> {
     // 앱 부팅 시 마이그레이션 자동 적용
-    sqlx::migrate!("../migrations").run(&pool).await?;
+    sqlx::migrate!("../migrations")
+        .run(&pool)
+        .await
+        .map_err(|e| {
+            tracing::error!("DB 마이그레이션 실패: {}", e);
+            e
+        })?;
 
     // 리포지토리 초기화
     let posts_repo = PostRepository::new(pool.clone());
     let comments_repo = CommentRepository::new(pool.clone());
     let users_repo = UserRepository::new(pool.clone());
 
-    // broadcast 채널 생성
-    let (notify_tx, _) = broadcast::channel(100);
+
 
     // 서비스에 리포지토리 주입
     let post_service = Arc::new(PostService::new(posts_repo.clone()));
     let comment_service = Arc::new(CommentService::new(
         posts_repo,
         comments_repo,
-        notify_tx.clone(),
+        notification_client.clone(),
     ));
     let user_service = Arc::new(UserService::new(users_repo));
-
-    let ws_semaphore = Arc::new(Semaphore::new(1000));
 
     // AppState에 담기
     let state = AppState {
@@ -58,8 +60,7 @@ pub async fn run_app(
         comment_service,
         pool: pool.clone(),
         user_service,
-        notify_tx,
-        ws_semaphore,
+        notification_client,
     };
 
     let governor_conf = GovernorConfigBuilder::default()
@@ -67,7 +68,10 @@ pub async fn run_app(
         .burst_size(1000)
         .key_extractor(ForwardedIpKeyExtractor)
         .finish()
-        .unwrap();
+        .ok_or_else(|| {
+            tracing::error!("Governor 설정 실패");
+            anyhow::anyhow!("Governor 설정 실패")
+        })?;
 
     let governor_layer = GovernorLayer::new(governor_conf).error_handler(rate_limit_error_response);
 

@@ -14,7 +14,6 @@ use crate::{
         comment::{CommentOpenApiDoc, create_comment, list_comments},
         meta::{MetaOpenApiDoc, health, version},
         post::{PostOpenApiDoc, create_post, delete_post, get_post, list_posts, update_post},
-        ws::{WsOpenApiDoc, ws_notifications},
     },
     middleware::auth::require_auth,
     state::AppState,
@@ -42,13 +41,6 @@ pub fn protected_routes(state: AppState) -> Router<AppState> {
         .route_layer(middleware::from_fn_with_state(state, require_auth))
 }
 
-/// ws 라우트
-pub fn ws_routes(state: AppState) -> Router<AppState> {
-    Router::new()
-        .route("/ws/notifications", get(ws_notifications))
-        .route_layer(middleware::from_fn_with_state(state, require_auth))
-}
-
 pub fn get_swagger_router(app_state: AppState) -> axum::Router {
     const VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -66,7 +58,6 @@ pub fn get_swagger_router(app_state: AppState) -> axum::Router {
     api.merge(PostOpenApiDoc::openapi());
     api.merge(CommentOpenApiDoc::openapi());
     api.merge(AuthOpenApiDoc::openapi());
-    api.merge(WsOpenApiDoc::openapi());
 
     SwaggerUi::new("/swagger-ui")
         .url("/api-docs/openapi.json", api)
@@ -78,7 +69,6 @@ pub fn create_router(state: AppState) -> Router {
     Router::new()
         .merge(public_routes())
         .merge(protected_routes(state.clone()))
-        .merge(ws_routes(state.clone()))
         .with_state(state.clone())
         .merge(get_swagger_router(state))
 }

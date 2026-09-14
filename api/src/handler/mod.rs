@@ -3,4 +3,3 @@ pub mod comment;
 pub mod meta;
 pub mod post;
 pub mod types;
-pub mod ws;

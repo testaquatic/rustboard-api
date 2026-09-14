@@ -1,14 +1,22 @@
+use std::sync::LazyLock;
+
 use futures_util::{
     StreamExt,
+    future::Join,
     stream::{SplitSink, SplitStream},
 };
 use reqwest::{StatusCode, header};
 
-use rustboard_api::{handler::types::input::CreatePostInput, startup::run_app};
+use rustboard_api::{
+    client::notification::NotificationClient, handler::types::input::CreatePostInput,
+    startup::run_app,
+};
 use rustboard_domain::{
     configuration::{DatabaseSettings, Settings},
     telemetry,
 };
+use rustboard_notifier::service::NotifierSevice;
+use rustboard_proto::notification::notification_service_server::NotificationServiceServer;
 use serde_json::json;
 use sqlx::{QueryBuilder, postgres::PgPoolOptions};
 use tokio::{net::TcpListener, task::JoinHandle};
@@ -19,7 +27,22 @@ pub struct TestContext {
     _join_handle: JoinHandle<Result<(), anyhow::Error>>,
     configuration: Settings,
     reqwest_client: reqwest::Client,
+    _grpc_server_handle: &'static JoinHandle<()>,
 }
+
+// gRPC 서버 실행
+static NOTIFICATION_SERVER_HANDLE: LazyLock<JoinHandle<()>> = LazyLock::new(|| {
+    tokio::spawn(async move {
+        let addr = "127.0.0.1:50051";
+        let notifier = NotifierSevice::new();
+
+        tonic::transport::Server::builder()
+            .add_service(NotificationServiceServer::new(notifier))
+            .serve(addr.parse().expect("gRPC 서버 주소 파싱 실패"))
+            .await
+            .expect("gRPC 서버 시작 실패");
+    })
+});
 
 impl TestContext {
     pub async fn new() -> Self {
@@ -38,10 +61,24 @@ impl TestContext {
             .await
             .expect("Failed to bind");
 
+        // gRPC 클라이언트 연결
+        let grpc_server_handle = LazyLock::force(&NOTIFICATION_SERVER_HANDLE);
+        let notification_client =
+            NotificationClient::connect(&configuration.notification_server_addr)
+                .await
+                .map_err(|e| {
+                    tracing::error!("알림 서비스 연결 실패: {}", e);
+                    e
+                })
+                .expect("알림 서비스 연결 실패");
+
         configuration.bind_addr = listener.local_addr().expect("로컬 주소 추출 실패");
 
         let app_info = configuration.clone().into();
-        let join_handle = tokio::spawn(async move { run_app(listener, pool, app_info).await });
+        let join_handle =
+            tokio::spawn(
+                async move { run_app(listener, pool, app_info, notification_client).await },
+            );
 
         let reqwest_clinet = reqwest::Client::new();
 
@@ -49,6 +86,7 @@ impl TestContext {
             _join_handle: join_handle,
             configuration,
             reqwest_client: reqwest_clinet,
+            _grpc_server_handle: grpc_server_handle,
         }
     }
 
@@ -225,6 +263,7 @@ fn get_test_configuration() -> Settings {
         service_name: "rustboard-api-test".to_string(),
         bind_addr: "127.0.0.1:0".parse().unwrap(),
         otel_exporter_otlp_endpoint: "http://localhost:4317".to_string(),
+        notification_server_addr: "http://localhost:50051".to_string(),
     }
 }
 

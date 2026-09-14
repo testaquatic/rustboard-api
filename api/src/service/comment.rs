@@ -1,9 +1,7 @@
-use rustboard_domain::{
-    comment::Comment, error::service_error::ServiceError, notification::Notification,
-};
-use tokio::sync::broadcast;
+use rustboard_domain::{comment::Comment, error::service_error::ServiceError};
 
 use crate::{
+    client::notification::NotificationClient,
     handler::types::input::CreateCommentInput,
     repository::{comment::CommentRepository, post::PostRepository},
 };
@@ -11,19 +9,19 @@ use crate::{
 pub struct CommentService {
     posts_repo: PostRepository,
     comments_repo: CommentRepository,
-    notify_tx: broadcast::Sender<Notification>,
+    notification_client: NotificationClient,
 }
 
 impl CommentService {
     pub fn new(
         posts_repo: PostRepository,
         comments_repo: CommentRepository,
-        notify_tx: broadcast::Sender<Notification>,
+        notification_client: NotificationClient,
     ) -> Self {
         Self {
             posts_repo,
             comments_repo,
-            notify_tx,
+            notification_client,
         }
     }
 
@@ -48,17 +46,19 @@ impl CommentService {
 
         let comment = self.comments_repo.insert(post_id, input).await?;
 
-        // 댓글 생성 알림 발생 (수신자가 없어도 무시)
-        let _ = self.notify_tx.send(Notification {
-            event_type: "comment_added".to_string(),
-            post_id,
-            comment_id: Some(comment.id),
-            actor: actor_name.to_string(),
-            message: format!(
-                "{}님이 {}번 게시글에 댓글을 달았습니다",
-                actor_name, post_id
-            ),
-        });
+        // gRPC로 알림 전송 (실패해도 댓글 생성은 유지)
+        if let Err(e) = self
+            .notification_client
+            .send_comment_notification(
+                &comment.post_id.to_string(),
+                actor_name,
+                post_id,
+                comment.id,
+            )
+            .await
+        {
+            tracing::warn!(error = %e, post_id, "알림 전송 실패 (댓글은 정상 생성됨)");
+        }
 
         Ok(comment)
     }

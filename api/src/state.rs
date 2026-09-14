@@ -1,10 +1,12 @@
 use std::sync::Arc;
 
-use rustboard_domain::{configuration::Settings, notification::Notification};
+use rustboard_domain::configuration::Settings;
 use secrecy::SecretString;
-use tokio::sync::{Semaphore, broadcast};
 
-use crate::service::{comment::CommentService, post::PostService, user::UserService};
+use crate::{
+    client::notification::NotificationClient,
+    service::{comment::CommentService, post::PostService, user::UserService},
+};
 
 /// AppState 정의
 #[derive(Clone)]
@@ -14,8 +16,7 @@ pub struct AppState {
     pub post_service: Arc<PostService>,
     pub comment_service: Arc<CommentService>,
     pub user_service: Arc<UserService>,
-    pub notify_tx: broadcast::Sender<Notification>,
-    pub ws_semaphore: Arc<Semaphore>,
+    pub notification_client: NotificationClient,
 }
 
 #[derive(Clone)]

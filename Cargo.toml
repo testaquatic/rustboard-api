@@ -78,5 +78,7 @@ tonic-prost-build = "0.14"
 ### 워크스페이스 라이브러리
 # domain
 rustboard-domain = { path = "domain" }
+# notifier
+rustboard-notifier = { path = "notifier" }
 # proto
 rustboard-proto = { path = "proto" }

@@ -1,4 +1,4 @@
-use rustboard_api::startup;
+use rustboard_api::{client::notification::NotificationClient, startup};
 use rustboard_domain::{configuration::get_configuration, telemetry};
 use sqlx::postgres::PgPoolOptions;
 
@@ -14,9 +14,21 @@ async fn main() -> Result<(), anyhow::Error> {
     let pool = PgPoolOptions::new()
         .max_connections(5)
         .connect(&configuration.database.database_url())
-        .await?;
+        .await
+        .map_err(|e| {
+            tracing::error!("DB 연결 실패: {}", e);
+            e
+        })?;
 
-    // 서버 실행
+    // gRPC 클라이언트 연결
+    let notification_client = NotificationClient::connect(&configuration.notification_server_addr)
+        .await
+        .map_err(|e| {
+            tracing::error!("알림 서비스 연결 실패: {}", e);
+            e
+        })?;
+
+    // TCP 리스너 생성
     let listener = tokio::net::TcpListener::bind(configuration.bind_addr).await?;
     tracing::info!(
         "{} listening on http://{}",
@@ -24,7 +36,14 @@ async fn main() -> Result<(), anyhow::Error> {
         listener.local_addr()?
     );
 
-    startup::run_app(listener, pool.clone(), configuration.into()).await?;
+    // 서버 실행
+    startup::run_app(
+        listener,
+        pool.clone(),
+        configuration.into(),
+        notification_client,
+    )
+    .await?;
 
     Ok(())
 }

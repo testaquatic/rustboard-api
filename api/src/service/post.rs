@@ -150,6 +150,9 @@ mod tests {
     use super::*;
 
     async fn make_service() -> PostService {
+        // 설정 파일을 읽는다
+        std::env::set_current_dir("../").expect("경로 설정 실패");
+
         // 설정을 읽는다
         let configuration = Arc::new(get_configuration().expect("Failed to get configuration"));
 

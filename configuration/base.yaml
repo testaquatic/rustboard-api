@@ -9,3 +9,4 @@ database:
 jwt_secret: "super-secret-key-change-in-production"
 jwt_expiration_minutes: 15
 otel_exporter_otlp_endpoint: "http://localhost:4317"
+notification_server_addr: "http://127.0.0.1:50051"
