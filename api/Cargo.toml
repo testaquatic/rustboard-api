@@ -31,6 +31,7 @@ rustboard-proto.workspace = true
 [dev-dependencies]
 insta.workspace = true
 reqwest.workspace = true
+tokio-stream.workspace = true
 tokio-tungstenite.workspace = true
 tonic.workspace = true
 

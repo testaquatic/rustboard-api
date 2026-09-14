@@ -1,11 +1,4 @@
-use std::sync::LazyLock;
-
-use futures_util::{
-    StreamExt,
-    future::Join,
-    stream::{SplitSink, SplitStream},
-};
-use reqwest::{StatusCode, header};
+use reqwest::StatusCode;
 
 use rustboard_api::{
     client::notification::NotificationClient, handler::types::input::CreatePostInput,
@@ -20,29 +13,14 @@ use rustboard_proto::notification::notification_service_server::NotificationServ
 use serde_json::json;
 use sqlx::{QueryBuilder, postgres::PgPoolOptions};
 use tokio::{net::TcpListener, task::JoinHandle};
-use tokio_tungstenite::{WebSocketStream, tungstenite::handshake::client::Request};
 use uuid::Uuid;
 
 pub struct TestContext {
     _join_handle: JoinHandle<Result<(), anyhow::Error>>,
-    configuration: Settings,
+    pub configuration: Settings,
     reqwest_client: reqwest::Client,
-    _grpc_server_handle: &'static JoinHandle<()>,
+    _grpc_server_handle: JoinHandle<()>,
 }
-
-// gRPC 서버 실행
-static NOTIFICATION_SERVER_HANDLE: LazyLock<JoinHandle<()>> = LazyLock::new(|| {
-    tokio::spawn(async move {
-        let addr = "127.0.0.1:50051";
-        let notifier = NotifierSevice::new();
-
-        tonic::transport::Server::builder()
-            .add_service(NotificationServiceServer::new(notifier))
-            .serve(addr.parse().expect("gRPC 서버 주소 파싱 실패"))
-            .await
-            .expect("gRPC 서버 시작 실패");
-    })
-});
 
 impl TestContext {
     pub async fn new() -> Self {
@@ -62,7 +40,28 @@ impl TestContext {
             .expect("Failed to bind");
 
         // gRPC 클라이언트 연결
-        let grpc_server_handle = LazyLock::force(&NOTIFICATION_SERVER_HANDLE);
+        let grpc_listener = tokio::net::TcpListener::bind(
+            configuration
+                .notification_server_addr
+                .strip_prefix("http://")
+                .expect("http:// 접두사 제거 실패"),
+        )
+        .await
+        .expect("gRPC 리스너 생성 실패");
+        configuration.notification_server_addr =
+            format!("http://{}", grpc_listener.local_addr().unwrap());
+        // gRPC 서버 실행
+        let grpc_server_handle = tokio::spawn(async move {
+            let notifier = NotifierSevice::new();
+
+            tonic::transport::Server::builder()
+                .add_service(NotificationServiceServer::new(notifier))
+                .serve_with_incoming(tokio_stream::wrappers::TcpListenerStream::new(
+                    grpc_listener,
+                ))
+                .await
+                .expect("gRPC 서버 시작 실패");
+        });
         let notification_client =
             NotificationClient::connect(&configuration.notification_server_addr)
                 .await
@@ -209,44 +208,6 @@ impl TestContext {
         }
         responses
     }
-
-    /// WS 클라이언트를 얻는다.
-    pub async fn connect_ws(
-        &self,
-        uri: &str,
-        token: Option<&str>,
-    ) -> Result<
-        (
-            SplitSink<
-                WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>,
-                tokio_tungstenite::tungstenite::Message,
-            >,
-            SplitStream<WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>>,
-        ),
-        anyhow::Error,
-    > {
-        let mut request =
-            Request::builder().uri(format!("ws://{}{}", self.configuration.bind_addr, uri));
-        if let Some(token) = token {
-            request = request.header(header::AUTHORIZATION, format!("Bearer {}", token));
-        }
-        let request = request
-            .header(header::HOST, self.configuration.bind_addr.to_string())
-            .header(header::CONNECTION, "Upgrade")
-            .header(header::UPGRADE, "websocket")
-            .header(header::SEC_WEBSOCKET_VERSION, "13")
-            .header(
-                header::SEC_WEBSOCKET_KEY,
-                tokio_tungstenite::tungstenite::handshake::client::generate_key(),
-            )
-            .body(())?;
-
-        let (ws_stream, _) = tokio_tungstenite::connect_async(request).await?;
-
-        let (write, read) = ws_stream.split();
-
-        Ok((write, read))
-    }
 }
 
 fn get_test_configuration() -> Settings {
@@ -263,7 +224,7 @@ fn get_test_configuration() -> Settings {
         service_name: "rustboard-api-test".to_string(),
         bind_addr: "127.0.0.1:0".parse().unwrap(),
         otel_exporter_otlp_endpoint: "http://localhost:4317".to_string(),
-        notification_server_addr: "http://localhost:50051".to_string(),
+        notification_server_addr: "http://localhost:0".to_string(),
     }
 }
 
