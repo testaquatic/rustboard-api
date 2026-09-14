@@ -5,6 +5,8 @@ services:
             dockerfile: Dockerfile
         ports:
             - "3000:3000"
+        expose:
+            - "50051"
         environment:
             - APP_BIND_ADDR=0.0.0.0:3000
             - APP_SERVICE_NAME=rustboard-api
@@ -16,6 +18,7 @@ services:
             - APP_JWT_SECRET=super-secret-key-change-in-production
             - APP_JWT_EXPIRATION_MINUTES=15
             - APP_OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+            - APP_NOTIFICATION_SERVER_ADDR=http://0.0.0.0:50051
         depends_on:
             db:
                 condition: service_healthy

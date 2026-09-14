@@ -26,13 +26,10 @@ utoipa-swagger-ui.workspace = true
 uuid.workspace = true
 
 rustboard-domain.workspace = true
+rustboard-notifier.workspace = true
 rustboard-proto.workspace = true
 
 [dev-dependencies]
 insta.workspace = true
 reqwest.workspace = true
 tokio-stream.workspace = true
-tokio-tungstenite.workspace = true
-tonic.workspace = true
-
-rustboard-notifier.workspace = true
